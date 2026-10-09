@@ -18,35 +18,40 @@ services:
       timeout: 5s
       retries: 10
 
+  # Model cache: if you already ran the original `customer-compass` repo on
+  # this machine, run `./scripts/setup-ollama-cache.sh` once before `up` —
+  # it detects that repo's existing Ollama volume (already holding
+  # qwen2.5:3b / mxbai-embed-large) and reuses it here, skipping a fresh
+  # multi-GB download. If no prior cache is found, a new volume is created
+  # and models are pulled fresh on first use. See README for details.
   ollama:
     image: ollama/ollama:latest
-    container_name: customer-compass-ollama
+    container_name: customer-compass-v2-ollama
     ports:
       - "11435:11434"
     volumes:
       - ollama-data:/root/.ollama
 
-  # --- Alternative vector store (Qdrant) ---------------------------------
-  # Default vector storage is `pgvector` on the `db` service above (Stage 3).
-  # To try Qdrant as a swappable alternative instead (see docs/tech-stack.md):
-  #   1. Uncomment the `qdrant` service below.
-  #   2. Run `docker-compose up -d qdrant`.
-  #   3. Set `VECTOR_STORE=qdrant` when starting the API (`npm run dev`).
-  #   4. Comment it back out (and unset the env var) to return to pgvector —
-  #      no other changes needed, both stores can coexist since RAG data is
-  #      always re-ingested via `POST /api/documents/ingest`.
-  #
-  # qdrant:
-  #   image: qdrant/qdrant:latest
-  #   container_name: customer-compass-qdrant
-  #   ports:
-  #     - "6333:6333"   # REST API
-  #     - "6334:6334"   # gRPC API
-  #   volumes:
-  #     - qdrant-data:/qdrant/storage
-  # -------------------------------------------------------------------------
+  # Vector DB for v2 (replacing pgvector from v1 — see docs/tech-stack.md
+  # and the v2 migration plan). Standing this up here in PR 1; ingestion/
+  # retrieval code is migrated to use it in later PRs. Postgres (above)
+  # stays for structured/relational data (companies, CRM facts) only.
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: customer-compass-v2-qdrant
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC API
+    volumes:
+      - qdrant-data:/qdrant/storage
 
 volumes:
   postgres-data:
+  # Explicit, overridable name so this volume can point at an existing
+  # Ollama model cache (e.g. from the original customer-compass repo)
+  # instead of always creating a brand-new one. Set via .env — see
+  # scripts/setup-ollama-cache.sh.
   ollama-data:
-  # qdrant-data:   # uncomment along with the `qdrant` service above
+    name: ${OLLAMA_VOLUME_NAME:-customer-compass-v2_ollama-data}
+  qdrant-data:
+
