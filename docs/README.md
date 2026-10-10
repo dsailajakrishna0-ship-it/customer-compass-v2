@@ -63,12 +63,13 @@ tool calling, guardrails, evaluation), what alternatives are already wired in
 as opt-in toggles, and other free options worth exploring — updated as new
 stages introduce new choices.
 
-## Troubleshooting
+## Usage guide & troubleshooting
 
-See [v2-startup-troubleshooting.md](v2-startup-troubleshooting.md) for known
-local-startup issues specific to this repo (container-name clashes with v1,
-shared ports, env-file setup, free-tier cloud model quirks) and how to work
-around them.
+See [v2-startup-troubleshooting.md](v2-startup-troubleshooting.md) for how to
+use the "Ask Compass" chat panel (modes, models, example questions) plus
+known local-startup issues specific to this repo (container-name clashes
+with v1, shared ports, env-file setup, free-tier cloud model quirks) and how
+to work around them.
 
 ## Archive
 
