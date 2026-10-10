@@ -1,7 +1,7 @@
 services:
   db:
     image: pgvector/pgvector:pg17
-    container_name: customer-compass-db
+    container_name: customer-compass-v2-db
     environment:
       POSTGRES_DB: customer_compass
       POSTGRES_USER: customer_compass
