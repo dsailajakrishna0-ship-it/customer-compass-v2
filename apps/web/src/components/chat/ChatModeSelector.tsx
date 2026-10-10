@@ -30,25 +30,25 @@ export function ChatModeSelector({
       <button type="button" onClick={onIngest} disabled={isIngesting}>
         {isIngesting ? "Ingesting…" : "Ingest documents"}
       </button>
-      <label className="provider-select">
-        Chat mode:
-        <select value={chatMode} onChange={(event) => onChangeMode(event.target.value as ChatMode)}>
+      <div className="provider-select">
+        <label htmlFor="chat-mode-select">Chat mode:</label>
+        <select id="chat-mode-select" value={chatMode} onChange={(event) => onChangeMode(event.target.value as ChatMode)}>
           <option value="general">{MODE_COPY.general.label}</option>
           <option value="rag">{MODE_COPY.rag.label}</option>
           <option value="crm">{MODE_COPY.crm.label}</option>
         </select>
-      </label>
-      <label className="provider-select">
-        Model:
-        <select value={provider} onChange={(event) => onChangeProvider(event.target.value as LlmProvider)}>
+      </div>
+      <div className="provider-select">
+        <label htmlFor="provider-select">Model:</label>
+        <select id="provider-select" value={provider} onChange={(event) => onChangeProvider(event.target.value as LlmProvider)}>
           <option value="ollama">Local (Ollama · qwen2.5:3b)</option>
           <option value="cloud">Cloud (OpenRouter, free tier)</option>
         </select>
-      </label>
+      </div>
       {provider === "cloud" && (
-        <label className="provider-select">
-          OpenRouter model:
-          <select value={cloudModel} onChange={(event) => onChangeCloudModel(event.target.value)}>
+        <div className="provider-select">
+          <label htmlFor="cloud-model-select">OpenRouter model:</label>
+          <select id="cloud-model-select" value={cloudModel} onChange={(event) => onChangeCloudModel(event.target.value)}>
             <optgroup label="Free">
               {cloudModels.free.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
@@ -62,7 +62,7 @@ export function ChatModeSelector({
               </optgroup>
             )}
           </select>
-        </label>
+        </div>
       )}
     </div>
   );
