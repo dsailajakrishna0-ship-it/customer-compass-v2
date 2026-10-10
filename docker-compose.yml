@@ -45,6 +45,22 @@ services:
     volumes:
       - qdrant-data:/qdrant/storage
 
+  # FastAPI service for the v2 migration (PR 2 of N — skeleton only: a
+  # /health check wired to real Postgres, nothing else yet). Runs alongside
+  # the Express API (apps/api, port 3001) until chat/RAG/CRM routes are
+  # ported over in later PRs; the frontend does not call this yet.
+  api-py:
+    build:
+      context: ./apps/api-py
+    container_name: customer-compass-v2-api-py
+    environment:
+      DATABASE_URL: postgresql://customer_compass:customer_compass_dev@db:5432/customer_compass
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres-data:
   # Explicit, overridable name so this volume can point at an existing
