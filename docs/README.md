@@ -63,6 +63,13 @@ tool calling, guardrails, evaluation), what alternatives are already wired in
 as opt-in toggles, and other free options worth exploring — updated as new
 stages introduce new choices.
 
+## Troubleshooting
+
+See [v2-startup-troubleshooting.md](v2-startup-troubleshooting.md) for known
+local-startup issues specific to this repo (container-name clashes with v1,
+shared ports, env-file setup, free-tier cloud model quirks) and how to work
+around them.
+
 ## Archive
 
 [`archive-01/`](archive-01/) contains a frozen snapshot of the original flat
