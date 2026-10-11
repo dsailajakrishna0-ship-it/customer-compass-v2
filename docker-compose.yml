@@ -45,12 +45,15 @@ services:
     volumes:
       - qdrant-data:/qdrant/storage
 
-  # FastAPI service for the v2 migration (PR 3 of N: document ingestion into
-  # Qdrant, using Google's gemini-embedding-001 for embeddings). Runs
-  # alongside the Express API (apps/api, port 3001) until chat/RAG routes are
-  # ported over in a later PR; the frontend does not call this yet.
-  # sample-data is mounted read-only since the Docker image only contains
-  # apps/api-py, not the whole repo.
+  # FastAPI service for the v2 migration (PR 4 of N: chat/RAG/CRM routes and
+  # the LLM provider abstraction, alongside the PR 3 ingestion pipeline).
+  # Runs alongside the Express API (apps/api, port 3001) until the frontend
+  # is cut over to this service in a later PR; the frontend does not call
+  # this yet. sample-data is mounted read-only since the Docker image only
+  # contains apps/api-py, not the whole repo. OLLAMA_URL points at the
+  # ollama service's internal Docker DNS name/port (not the host-mapped
+  # 11435 that apps/api's .env uses, since api-py reaches it over the
+  # compose network rather than from the host).
   api-py:
     build:
       context: ./apps/api-py
@@ -60,6 +63,11 @@ services:
       QDRANT_URL: http://qdrant:6333
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       SAMPLE_DATA_DIR: /sample-data/documents
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-liquid/lfm-2.5-2.6b:free}
     volumes:
       - ./sample-data:/sample-data:ro
     ports:
@@ -68,6 +76,8 @@ services:
       db:
         condition: service_healthy
       qdrant:
+        condition: service_started
+      ollama:
         condition: service_started
 
 volumes:

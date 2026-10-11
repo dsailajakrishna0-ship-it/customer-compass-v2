@@ -1,10 +1,12 @@
-"""FastAPI service for the v2 stack migration (Stage 6 prep, PR 3 of N).
+"""FastAPI service for the v2 stack migration (Stage 6 prep, PR 4 of N).
 
 This service runs alongside the existing Express API (apps/api) during the
 migration. PR 2 proved the FastAPI + uv + Docker wiring works end to end
-(health check against Postgres). PR 3 adds the first real feature: document
-ingestion into Qdrant (see app/rag/, app/routes/documents.py). Chat/RAG query
-routes are still served by the Express API until a later PR ports them too.
+(health check against Postgres). PR 3 added document ingestion into Qdrant.
+PR 4 adds the chat/RAG query routes (general chat, grounded RAG, CRM
+copilot) and the OpenRouter model list — the full feature set the Express
+API's frontend-facing routes provide. The frontend is not switched over to
+this service yet (that's PR 5).
 """
 
 from contextlib import asynccontextmanager
@@ -14,7 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import close_pool, get_pool
 from app.rag.qdrant_store import close_client
+from app.routes.chat import router as chat_router
 from app.routes.documents import router as documents_router
+from app.routes.llm import router as llm_router
 
 
 @asynccontextmanager
@@ -34,6 +38,8 @@ app.add_middleware(
 )
 
 app.include_router(documents_router)
+app.include_router(chat_router)
+app.include_router(llm_router)
 
 
 @app.get("/health")
