@@ -1,12 +1,14 @@
-"""FastAPI service for the v2 stack migration (Stage 6 prep, PR 4 of N).
+"""FastAPI service for the v2 stack migration (Stage 6 prep, PR 5 of N).
 
-This service runs alongside the existing Express API (apps/api) during the
-migration. PR 2 proved the FastAPI + uv + Docker wiring works end to end
-(health check against Postgres). PR 3 added document ingestion into Qdrant.
-PR 4 adds the chat/RAG query routes (general chat, grounded RAG, CRM
-copilot) and the OpenRouter model list — the full feature set the Express
-API's frontend-facing routes provide. The frontend is not switched over to
-this service yet (that's PR 5).
+This service replaces the Express API (apps/api) for the frontend. PR 2
+proved the FastAPI + uv + Docker wiring works end to end (health check
+against Postgres). PR 3 added document ingestion into Qdrant. PR 4 added
+the chat/RAG query routes (general chat, grounded RAG, CRM copilot) and
+the OpenRouter model list. PR 5 adds the company list/detail routes and
+cuts the frontend over to this service — all frontend-facing routes live
+under /api/v1 (matching the old Express API's /api prefix, with a version
+segment added since this is now the long-term API surface). /health stays
+unprefixed, same as it was in Express.
 """
 
 from contextlib import asynccontextmanager
@@ -17,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db import close_pool, get_pool
 from app.rag.qdrant_store import close_client
 from app.routes.chat import router as chat_router
+from app.routes.companies import router as companies_router
 from app.routes.documents import router as documents_router
 from app.routes.llm import router as llm_router
 
@@ -37,9 +40,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(documents_router)
-app.include_router(chat_router)
-app.include_router(llm_router)
+app.include_router(documents_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
+app.include_router(llm_router, prefix="/api/v1")
+app.include_router(companies_router, prefix="/api/v1")
 
 
 @app.get("/health")

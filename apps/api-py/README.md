@@ -1,33 +1,33 @@
 # Customer Compass API (Python)
 
-FastAPI service for the v2 stack migration (replacing the Express API in
-`apps/api`, one PR at a time — see `docs/v2-stack-migration.md`).
+# Customer Compass API (Python)
+
+FastAPI service for the v2 stack — replaces the original Express API
+(`apps/api`, removed in PR 5) one PR at a time. All frontend-facing routes
+live under `/api/v1` (see `docs/tech-stack.md` for the overall migration
+narrative); `/health` stays unprefixed.
 
 - **PR 2**: app wiring, Postgres connectivity check (`/health`), Docker image.
-- **PR 3**: document ingestion pipeline (`POST /documents/ingest`) — parses
-  `sample-data/documents/*.md`, chunks, embeds via Google's
+- **PR 3**: document ingestion pipeline (`POST /api/v1/documents/ingest`) —
+  parses `sample-data/documents/*.md`, chunks, embeds via Google's
   `gemini-embedding-001`, and stores chunk vectors + payload in Qdrant.
   Postgres keeps `documents`/`ingestion_runs` as ingestion metadata only.
-- **PR 4**: chat/RAG/CRM routes and the LLM provider abstraction, ported
-  from `apps/api`'s Express routes (`routes/chat.ts`, `routes/llm.ts`,
-  `llm/*`, `chat/router.ts`, `crm/queries.ts`):
-  - `POST /chat` — general chat (no retrieval).
-  - `POST /chat/rag` — grounded chat; retrieves relevant chunks from Qdrant
-    (with company-scoping via a `should`/`IsNullCondition` filter) and cites
-    sources.
-  - `POST /chat/crm` — keyword-routed chat; pulls structured CRM facts
-    (open deals, company summary) from Postgres, RAG chunks from Qdrant, or
-    both, depending on `app/chat/router.py`'s `classify_query`.
-  - `GET /llm/models` — OpenRouter free/paid model catalog, TTL-cached.
+- **PR 4**: chat/RAG/CRM routes and the LLM provider abstraction:
+  - `POST /api/v1/chat` — general chat (no retrieval).
+  - `POST /api/v1/chat/rag` — grounded chat; retrieves relevant chunks from
+    Qdrant (with company-scoping via a `should`/`IsNullCondition` filter)
+    and cites sources.
+  - `POST /api/v1/chat/crm` — keyword-routed chat; pulls structured CRM
+    facts (open deals, company summary) from Postgres, RAG chunks from
+    Qdrant, or both, depending on `app/chat/router.py`'s `classify_query`.
+  - `GET /api/v1/llm/models` — OpenRouter free/paid model catalog, TTL-cached.
   - Request validation: messages must be non-empty, ≤12 messages, each
-    message's `content` must be ≤4000 chars and non-blank after trimming
-    (mirrors `apps/api`'s Zod validation; FastAPI returns `422` instead of
-    Express's `400` for validation errors — a known framework difference,
-    not yet reconciled since the frontend isn't wired to this service yet).
-
-No company/document management UI routes are ported yet. `apps/api`
-(Express) remains the service actually used by the frontend until the
-migration completes (see `docs/v2-stack-migration.md`).
+    message's `content` must be ≤4000 chars and non-blank after trimming.
+    FastAPI returns `422` for validation errors (a framework default,
+    unlike the old Express API's `400`).
+- **PR 5**: company routes (`GET /api/v1/companies`, `GET
+  /api/v1/companies/{id}`) ported, frontend cut over to this service, and
+  the old Express API (`apps/api`) removed entirely.
 
 ## Local development
 
@@ -40,9 +40,10 @@ uv run uvicorn app.main:app --reload --port 8001
 
 Requires Postgres, Qdrant, and Ollama running: `docker-compose up -d db
 qdrant ollama` (from the repo root). Get a free `GOOGLE_API_KEY` at
-https://aistudio.google.com/apikey — needed for `/documents/ingest` (not for
-`/health`). Get a free `OPENROUTER_API_KEY` at https://openrouter.ai/keys —
-needed only for `provider: "cloud"` requests or `LLM_PROVIDER=cloud`.
+https://aistudio.google.com/apikey — needed for `/api/v1/documents/ingest`
+(not for `/health`). Get a free `OPENROUTER_API_KEY` at
+https://openrouter.ai/keys — needed only for `provider: "cloud"` requests or
+`LLM_PROVIDER=cloud`.
 
 ## Verify
 
@@ -50,28 +51,31 @@ needed only for `provider: "cloud"` requests or `LLM_PROVIDER=cloud`.
 curl -s http://localhost:8001/health
 # {"status":"ok"}
 
-curl -s -X POST http://localhost:8001/documents/ingest
+curl -s http://localhost:8001/api/v1/companies
+curl -s http://localhost:8001/api/v1/companies/1
+
+curl -s -X POST http://localhost:8001/api/v1/documents/ingest
 # {"ingestionRunId":1,"documentsProcessed":8,"chunksCreated":16,"status":"completed"}
 
-curl -s http://localhost:8001/documents
-curl -s http://localhost:8001/documents/ingestion-runs
+curl -s http://localhost:8001/api/v1/documents
+curl -s http://localhost:8001/api/v1/documents/ingestion-runs
 
-curl -s -X POST http://localhost:8001/chat \
+curl -s -X POST http://localhost:8001/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Hello"}]}'
 # {"message":"...","provider":"ollama"}
 
-curl -s -X POST http://localhost:8001/chat/rag \
+curl -s -X POST http://localhost:8001/api/v1/chat/rag \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"What is our refund policy?"}]}'
 # {"message":"...","citations":[...],"provider":"ollama"}
 
-curl -s -X POST http://localhost:8001/chat/crm \
+curl -s -X POST http://localhost:8001/api/v1/chat/crm \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Tell me about Acme Corp"}]}'
 # {"message":"...","facts":{...},"citations":[...],"scopedCompany":"Acme Fabrication","provider":"ollama"}
 
-curl -s http://localhost:8001/llm/models
+curl -s http://localhost:8001/api/v1/llm/models
 # {"free":[...],"paid":[...]}
 ```
 

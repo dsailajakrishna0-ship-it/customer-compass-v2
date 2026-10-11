@@ -32,9 +32,11 @@ each mode, and example questions to try.
 - **Local (Ollama · qwen2.5:3b)** — runs fully offline on your machine, no
   API key needed, consistent but slower on CPU.
 - **Cloud (OpenRouter, free tier)** — faster, needs `OPENROUTER_API_KEY` set
-  in `apps/api/.env`; a third dropdown lets you pick the specific free
-  model. Free models can occasionally return an empty/rate-limited response
-  (see issue #6 below) — just retry or switch models.
+  in `apps/api-py/.env` (and in root `.env` / `docker-compose.yml`'s
+  `api-py` environment if running the full containerized stack); a third
+  dropdown lets you pick the specific free model. Free models can
+  occasionally return an empty/rate-limited response (see issue #6 below)
+  — just retry or switch models.
 
 There is **no separate company selector** in the UI — you simply name the
 company in your question text (e.g. "Acme Fabrication"), and the app scopes
@@ -117,16 +119,21 @@ Both repos' Postgres and Ollama services bind the **same host ports** (5432,
 these services running at once — stop one (`docker-compose down`) before
 starting the other.
 
-### 5. `apps/api/.env` is per-repo, not shared
+### 5. `apps/api-py/.env` is per-repo, not shared
 
-v1 and v2 are separate clones with separate `apps/api/.env` files (gitignored
-in both). Setting `OPENROUTER_API_KEY` in v1's `.env` does **not**
-automatically apply to v2 — copy it over manually if reusing the same key:
+v1 (Express, `apps/api/.env`) and v2 (FastAPI, `apps/api-py/.env`) have
+separate, gitignored env files — and v2's own file isn't the same one
+Docker Compose reads either (that's the root `.env`, for variable
+substitution in `docker-compose.yml`). Setting `OPENROUTER_API_KEY` in one
+does **not** automatically apply to the others — copy it over manually if
+reusing the same key:
 ```bash
-cp ../customer-compass/apps/api/.env apps/api/.env
+cp ../customer-compass/apps/api/.env apps/api-py/.env
+# and/or add it to the repo-root .env if running via docker-compose
 ```
-Then restart `npm run dev` (env vars are loaded once at process start, not
-hot-reloaded on `.env` changes).
+Then restart the service (`docker-compose up -d --build api-py`, or
+`uv run uvicorn app.main:app --reload --port 8001` for local dev) — env
+vars are loaded once at process start, not hot-reloaded on `.env` changes.
 
 ### 6. Free-tier OpenRouter cloud models are inconsistent — not a bug
 
@@ -135,8 +142,8 @@ returned an empty response. Try again or pick a different model."* This is
 expected: free-tier models route through shared, rate-limited community
 infrastructure and can return a `200 OK` with no actual content. The app
 already distinguishes this case from a hard error (see
-`apps/api/src/llm/cloud.ts`). If it happens, just retry or pick a different
-model from the dropdown — it isn't specific to v2.
+`apps/api-py/app/llm/cloud.py`). If it happens, just retry or pick a
+different model from the dropdown — it isn't specific to v2.
 
 ### 7. Dropdown "selected value" can look wrong due to shared browser storage
 

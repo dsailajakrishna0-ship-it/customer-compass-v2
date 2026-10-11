@@ -53,7 +53,7 @@ export type Citation = {
   snippet: string;
 };
 
-/** Structured CRM facts returned by POST /api/chat/crm (Stage 5). Note: camelCase fields, unlike Deal above. */
+/** Structured CRM facts returned by POST /api/v1/chat/crm (Stage 5). Note: camelCase fields, unlike Deal above. */
 export type DealFact = {
   id: number;
   name: string;
