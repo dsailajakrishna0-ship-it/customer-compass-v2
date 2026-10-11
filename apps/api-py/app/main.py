@@ -1,10 +1,10 @@
-"""FastAPI skeleton for the v2 stack migration (Stage 6 prep, PR 2 of N).
+"""FastAPI service for the v2 stack migration (Stage 6 prep, PR 3 of N).
 
 This service runs alongside the existing Express API (apps/api) during the
-migration — it does not yet serve any of the real chat/RAG/CRM routes. Its
-only job right now is to prove the FastAPI + uv + Docker wiring works end to
-end, including a real Postgres connectivity check, before ingestion and
-retrieval logic are ported over in later PRs.
+migration. PR 2 proved the FastAPI + uv + Docker wiring works end to end
+(health check against Postgres). PR 3 adds the first real feature: document
+ingestion into Qdrant (see app/rag/, app/routes/documents.py). Chat/RAG query
+routes are still served by the Express API until a later PR ports them too.
 """
 
 from contextlib import asynccontextmanager
@@ -13,12 +13,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import close_pool, get_pool
+from app.rag.qdrant_store import close_client
+from app.routes.documents import router as documents_router
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     yield
     await close_pool()
+    await close_client()
 
 
 app = FastAPI(title="Customer Compass API (Python)", lifespan=lifespan)
@@ -29,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(documents_router)
 
 
 @app.get("/health")
