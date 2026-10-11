@@ -2,7 +2,7 @@ import { apiGet, apiPost } from "./client";
 import type { ChatMessage, ChatMode, ChatResponse, LlmProvider, ModelCatalog } from "../types";
 
 export function getCloudModels(): Promise<ModelCatalog> {
-  return apiGet<ModelCatalog>("/api/llm/models");
+  return apiGet<ModelCatalog>("/api/v1/llm/models");
 }
 
 type SendChatRequest = {
@@ -12,9 +12,9 @@ type SendChatRequest = {
 };
 
 const CHAT_ENDPOINTS: Record<ChatMode, string> = {
-  general: "/api/chat",
-  rag: "/api/chat/rag",
-  crm: "/api/chat/crm",
+  general: "/api/v1/chat",
+  rag: "/api/v1/chat/rag",
+  crm: "/api/v1/chat/crm",
 };
 
 /** Routes to the right additive endpoint ("/", "/rag", "/crm") for the active chat mode. */

@@ -35,7 +35,7 @@ this project's standing strategy). Two mechanisms are used:
    provider, the specific model) — the web app lets the user pick the
    provider from a dropdown on every message, no restart needed; when
    "Cloud" is selected, a second dropdown lets them pick any currently
-   available free OpenRouter model (fetched live from `GET /api/llm/models`),
+   available free OpenRouter model (fetched live from `GET /api/v1/llm/models`),
    with paid examples shown disabled for reference only. The server still
    supports env-var defaults (`LLM_PROVIDER`, `OPENROUTER_MODEL`) for clients
    that don't specify one (e.g. curl/tests).
@@ -54,13 +54,13 @@ information, organized the other way (by technology, not by stage).
 
 ![Stage 2](https://img.shields.io/badge/Stage_2-First_LLM_Chat-0969da) **— done**
 - **Ollama** (local, Docker) running **`qwen2.5:3b`** — the first chat/
-  completion model, called from `/api/chat`. No CRM data access yet.
+  completion model, called from `/api/v1/chat`. No CRM data access yet.
 
 ![Stage 3](https://img.shields.io/badge/Stage_3-Basic_RAG-1a7f37) **— done**
 - **Ollama embeddings**, `mxbai-embed-large` (1024-dim) — turns ingested CRM
   documents into vectors.
 - **PostgreSQL + `pgvector`** — added to the *same* database as the CRM
-  tables, storing and searching those embeddings. `/api/chat/rag` grounds
+  tables, storing and searching those embeddings. `/api/v1/chat/rag` grounds
   answers in retrieved, cited chunks.
 
 ![Stage 4](https://img.shields.io/badge/Stage_4-Cloud_LLM_Provider-e36209) **— done**
@@ -70,15 +70,15 @@ information, organized the other way (by technology, not by stage).
   (Local Ollama / Cloud OpenRouter), and — when Cloud is picked — a second
   "OpenRouter model" dropdown listing all current free models (selectable)
   plus a couple of paid examples (greyed out, reference only). Backed by
-  `GET /api/llm/models`.
+  `GET /api/v1/llm/models`.
 
 ![Stage 5](https://img.shields.io/badge/Stage_5-Realistic_CRM_RAG-d4a017) **— done**
 - **No new infra** — builds on the existing PostgreSQL tables and the Stage 3
   `pgvector` retrieval. Adds a deterministic, keyword-based query router
-  (`apps/api/src/chat/router.ts`) that decides whether a question needs
-  structured SQL facts (`apps/api/src/crm/queries.ts`), document retrieval
+  (`apps/api-py/app/chat/router.py`) that decides whether a question needs
+  structured SQL facts (`apps/api-py/app/crm/queries.py`), document retrieval
   (extended `retrieve.ts`, now customer-scoped by `company_id`), or both.
-  New additive `POST /api/chat/crm` endpoint and a three-way "Chat mode"
+  New additive `POST /api/v1/chat/crm` endpoint and a three-way "Chat mode"
   selector in the UI (General / RAG / CRM copilot) that visibly separates
   verified database facts from cited document claims.
 
@@ -112,11 +112,11 @@ Current OpenRouter default free model: `liquid/lfm-2.5-2.6b:free`. Since
 free-tier slugs get promoted to paid-only or rate-limited under shared-pool
 contention frequently, the web UI additionally exposes a second **"OpenRouter
 model"** dropdown (visible when "Cloud" is selected) populated live from
-`GET /api/llm/models` — the user can pick any currently free model per
+`GET /api/v1/llm/models` — the user can pick any currently free model per
 message, no server restart or `.env` edit needed. A couple of well-known paid
 models (GPT-4o-mini, Claude Sonnet 4) are listed alongside for reference but
 rendered disabled/greyed out — never selectable, so no request can
-accidentally incur cost. See `apps/api/.env.example` for a curl one-liner to
+accidentally incur cost. See `apps/api-py/.env.example` for a curl one-liner to
 inspect the raw free-model list server-side if needed.
 
 Free options worth exploring later:
