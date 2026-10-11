@@ -16,7 +16,19 @@ from app.rag.qdrant_store import COLLECTION_NAME, get_client
 
 DEFAULT_TOP_K = 4
 # Chunks below this cosine similarity are treated as not relevant enough to cite.
-MIN_SIMILARITY = 0.3
+#
+# Tuned empirically for gemini-embedding-001 (see evals/README.md, Stage 6):
+# sampled questions against the live sample-data corpus showed genuinely
+# relevant chunks scoring ~0.50-0.80, while clearly unrelated questions
+# ("What is the capital of France?", "How do I bake a chocolate cake?")
+# scored ~0.42-0.44. 0.45 sits in the gap between those two clusters. Note
+# this does NOT fully solve plausible-but-uncovered questions (e.g. "What
+# is our refund policy?" scores ~0.50-0.54, same range as real matches,
+# because it's topically CRM/support-adjacent) — that's a known limitation
+# of similarity-only filtering; the LLM's "not in the sources" response
+# text is still the real safety net for those, and the eval suite checks
+# for that behavior rather than expecting zero citations.
+MIN_SIMILARITY = 0.45
 
 
 @dataclass
