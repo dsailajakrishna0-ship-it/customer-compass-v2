@@ -82,9 +82,20 @@ information, organized the other way (by technology, not by stage).
   selector in the UI (General / RAG / CRM copilot) that visibly separates
   verified database facts from cited document claims.
 
-![Stage 6](https://img.shields.io/badge/Stage_6-Retrieval_Evaluation-lightgrey) **— planned**
-- Custom benchmark (`evals/questions.json`) + LLM-as-judge. Alternatives to
-  explore: RAGAS, DeepEval, promptfoo.
+![Stage 6](https://img.shields.io/badge/Stage_6-Retrieval_Evaluation-success) **— done**
+- **promptfoo**, testing the live `/api/v1/chat/rag` and `/api/v1/chat/crm`
+  HTTP endpoints directly (`evals/promptfooconfig.yaml`). Combines
+  deterministic checks (`icontains`/`javascript`, including a
+  company-scoping-isolation check) with LLM-as-judge (`llm-rubric`,
+  local `ollama:chat:qwen2.5:7b`) in the same test cases. Covers:
+  relevant-question grounding per company, out-of-corpus refusal (both a
+  plausible-but-uncovered question and a completely unrelated one), and
+  CRM structured-fact correctness.
+- Used to empirically tune `MIN_SIMILARITY` in `apps/api-py/app/rag/retrieve.py`
+  (raised `0.3` → `0.45` after sampling real similarity scores — see that
+  file's comment and `evals/README.md` for the full rationale). Confirmed
+  via this suite: clearly-irrelevant questions now retrieve zero chunks;
+  genuinely relevant ones are unaffected.
 
 ![Stage 7](https://img.shields.io/badge/Stage_7-Production_Concerns-lightgrey) **— planned**
 - Model fallback between providers, cost/latency tracking — design not
@@ -187,8 +198,8 @@ matches how modern AI tools (including this CLI) expose tools today.
 
 | | Technology | Status |
 | --- | --- | --- |
-| **Planned (default)** | Custom benchmark (`evals/questions.json`) + LLM-as-judge | Stage 6 |
-| **Alternatives worth exploring** | RAGAS, DeepEval, promptfoo | Not yet wired in |
+| **Active (default)** | promptfoo, HTTP provider against live endpoints (`evals/promptfooconfig.yaml`); keyword-match + LLM-as-judge in the same test cases | Stage 6 |
+| **Alternatives worth exploring** | RAGAS, DeepEval | Not wired in |
 
 ## Relational / application database
 
