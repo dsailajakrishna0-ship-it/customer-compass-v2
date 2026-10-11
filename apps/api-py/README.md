@@ -8,23 +8,41 @@ FastAPI service for the v2 stack migration (replacing the Express API in
   `sample-data/documents/*.md`, chunks, embeds via Google's
   `gemini-embedding-001`, and stores chunk vectors + payload in Qdrant.
   Postgres keeps `documents`/`ingestion_runs` as ingestion metadata only.
+- **PR 4**: chat/RAG/CRM routes and the LLM provider abstraction, ported
+  from `apps/api`'s Express routes (`routes/chat.ts`, `routes/llm.ts`,
+  `llm/*`, `chat/router.ts`, `crm/queries.ts`):
+  - `POST /chat` — general chat (no retrieval).
+  - `POST /chat/rag` — grounded chat; retrieves relevant chunks from Qdrant
+    (with company-scoping via a `should`/`IsNullCondition` filter) and cites
+    sources.
+  - `POST /chat/crm` — keyword-routed chat; pulls structured CRM facts
+    (open deals, company summary) from Postgres, RAG chunks from Qdrant, or
+    both, depending on `app/chat/router.py`'s `classify_query`.
+  - `GET /llm/models` — OpenRouter free/paid model catalog, TTL-cached.
+  - Request validation: messages must be non-empty, ≤12 messages, each
+    message's `content` must be ≤4000 chars and non-blank after trimming
+    (mirrors `apps/api`'s Zod validation; FastAPI returns `422` instead of
+    Express's `400` for validation errors — a known framework difference,
+    not yet reconciled since the frontend isn't wired to this service yet).
 
-No chat/RAG query routes are ported yet — `apps/api` (Express) remains the
-one actually used by the frontend until that migration completes.
+No company/document management UI routes are ported yet. `apps/api`
+(Express) remains the service actually used by the frontend until the
+migration completes (see `docs/v2-stack-migration.md`).
 
 ## Local development
 
 ```bash
 cd apps/api-py
 uv sync                 # installs dependencies into .venv
-cp .env.example .env    # then edit: DATABASE_URL, QDRANT_URL, GOOGLE_API_KEY
+cp .env.example .env    # then edit: DATABASE_URL, QDRANT_URL, GOOGLE_API_KEY, OLLAMA_URL/OPENROUTER_API_KEY
 uv run uvicorn app.main:app --reload --port 8001
 ```
 
-Requires Postgres and Qdrant running: `docker-compose up -d db qdrant` (from
-the repo root). Get a free `GOOGLE_API_KEY` at
+Requires Postgres, Qdrant, and Ollama running: `docker-compose up -d db
+qdrant ollama` (from the repo root). Get a free `GOOGLE_API_KEY` at
 https://aistudio.google.com/apikey — needed for `/documents/ingest` (not for
-`/health`).
+`/health`). Get a free `OPENROUTER_API_KEY` at https://openrouter.ai/keys —
+needed only for `provider: "cloud"` requests or `LLM_PROVIDER=cloud`.
 
 ## Verify
 
@@ -37,6 +55,24 @@ curl -s -X POST http://localhost:8001/documents/ingest
 
 curl -s http://localhost:8001/documents
 curl -s http://localhost:8001/documents/ingestion-runs
+
+curl -s -X POST http://localhost:8001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Hello"}]}'
+# {"message":"...","provider":"ollama"}
+
+curl -s -X POST http://localhost:8001/chat/rag \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"What is our refund policy?"}]}'
+# {"message":"...","citations":[...],"provider":"ollama"}
+
+curl -s -X POST http://localhost:8001/chat/crm \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Tell me about Acme Corp"}]}'
+# {"message":"...","facts":{...},"citations":[...],"scopedCompany":"Acme Fabrication","provider":"ollama"}
+
+curl -s http://localhost:8001/llm/models
+# {"free":[...],"paid":[...]}
 ```
 
 ## Tests
@@ -46,4 +82,6 @@ uv run pytest
 ```
 
 `tests/test_ingest.py` is skipped automatically if `GOOGLE_API_KEY` isn't set
-in the environment (it needs a live embedding call).
+in the environment (it needs a live embedding call). `tests/test_chat_router.py`
+covers `classify_query`'s keyword/company-matching logic with a stubbed
+`list_companies()` — no network required.
