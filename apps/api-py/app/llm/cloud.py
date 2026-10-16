@@ -14,6 +14,9 @@ import httpx
 from app.llm.types import ChatMessage
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+# RAG/CRM answers often quote multiple cited chunks plus a summary; 350 was
+# cutting those off mid-sentence (observed during Stage 6 manual testing).
+MAX_RESPONSE_TOKENS = 700
 DEFAULT_OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "liquid/lfm-2.5-2.6b:free")
 
 
@@ -34,7 +37,7 @@ async def generate_with_cloud(system_prompt: str, messages: list[ChatMessage], m
             json={
                 "model": resolved_model,
                 "temperature": 0.3,
-                "max_tokens": 350,
+                "max_tokens": MAX_RESPONSE_TOKENS,
                 "messages": [{"role": "system", "content": system_prompt}, *messages],
             },
         )

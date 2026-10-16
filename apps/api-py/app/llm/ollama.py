@@ -9,6 +9,9 @@ from app.llm.types import ChatMessage
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11435")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
+# Kept in sync with cloud.py's MAX_RESPONSE_TOKENS — same truncation issue
+# affects both providers for multi-citation RAG/CRM answers.
+MAX_RESPONSE_TOKENS = 700
 
 
 async def generate_with_ollama(system_prompt: str, messages: list[ChatMessage]) -> str:
@@ -19,7 +22,7 @@ async def generate_with_ollama(system_prompt: str, messages: list[ChatMessage]) 
                 "model": OLLAMA_MODEL,
                 "stream": False,
                 "messages": [{"role": "system", "content": system_prompt}, *messages],
-                "options": {"temperature": 0.3, "num_predict": 350},
+                "options": {"temperature": 0.3, "num_predict": MAX_RESPONSE_TOKENS},
             },
         )
     if response.status_code != 200:
