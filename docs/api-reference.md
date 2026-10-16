@@ -1,0 +1,282 @@
+# API reference (`apps/api-py`)
+
+Base URL (local dev / Docker Compose): `http://localhost:8001`
+
+All endpoints except `/health` are prefixed `/api/v1`. The backend is
+FastAPI; interactive Swagger docs are also available live at
+`http://localhost:8001/docs` whenever the service is running.
+
+## Conventions
+
+- All request/response bodies are JSON.
+- On success, chat endpoints return HTTP 200 even for "I don't know"-style
+  answers (e.g. no relevant documents found) — that's a valid answer, not an
+  error.
+- On failure, endpoints raise an HTTP error with a JSON body containing
+  **both** `error` and `detail` keys with the same message (see
+  [Error shape](#error-shape) below) — this dual-key shape exists because
+  the frontend's older contract (ported from the original Express API)
+  reads `error`, while FastAPI's default `HTTPException` body is `detail`;
+  a global exception handler in `app/main.py` adds both.
+
+---
+
+## `GET /health`
+
+Confirms the process is up **and** can reach Postgres (not just that the
+process is alive).
+
+**Response 200**
+```json
+{ "status": "ok" }
+```
+
+**Response 503** (DB unreachable) — see [Error shape](#error-shape).
+
+---
+
+## `GET /api/v1/companies`
+
+Lists all companies with deal/interaction counts, for the dashboard's
+company list.
+
+**Response 200**
+```json
+[
+  {
+    "id": 1,
+    "name": "Acme Fabrication",
+    "industry": "Manufacturing",
+    "relationship_status": "active",
+    "deal_count": 3,
+    "interaction_count": 7
+  }
+]
+```
+
+## `GET /api/v1/companies/{company_id}`
+
+Returns one company's profile plus contacts/deals/interactions, for the
+dashboard's company detail view.
+
+**Response 200**
+```json
+{
+  "id": 1,
+  "name": "Acme Fabrication",
+  "industry": "Manufacturing",
+  "website": "https://acme.example",
+  "relationship_status": "active",
+  "contacts": [{ "id": 1, "full_name": "Ravi Patel", "job_title": "Ops Manager", "email": "ravi@acme.example" }],
+  "deals": [{ "id": 1, "name": "Renewal FY26", "amount": "25000.00", "status": "open", "expected_close_date": "2026-03-01" }],
+  "interactions": [{ "id": 1, "interaction_type": "email", "subject": "Volume discount request", "occurred_at": "2026-01-10T14:00:00", "summary": "..." }]
+}
+```
+
+**Response 404** — unknown `company_id`.
+
+---
+
+## `POST /api/v1/chat`
+
+General-purpose chat — no document/CRM grounding (Stage 2 behavior). Always
+tells the model it has no CRM access.
+
+**Request body**
+```json
+{
+  "messages": [{ "role": "user", "content": "What can you help me with?" }],
+  "provider": "ollama",
+  "model": null
+}
+```
+| Field | Required | Notes |
+| --- | --- | --- |
+| `messages` | yes | 1–12 messages, `role` is `"user"` or `"assistant"`, `content` ≤ 4,000 chars and non-blank. |
+| `provider` | no | `"ollama"` or `"cloud"`. Defaults to `LLM_PROVIDER` env (default `"ollama"`). |
+| `model` | no | Only used when `provider` resolves to `"cloud"` (or a fallback lands on `"cloud"`) — an OpenRouter model id from `GET /api/v1/llm/models`. Ignored for `"ollama"`. |
+
+**Response 200**
+```json
+{
+  "message": "I can answer general questions, but I don't have access to your CRM data yet.",
+  "provider": "ollama",
+  "usage": { "...": "see Usage object" }
+}
+```
+
+---
+
+## `POST /api/v1/chat/rag`
+
+Retrieval-augmented chat: embeds the question, retrieves the nearest
+document chunks from Qdrant, and grounds the answer in them with required
+`[n]` citations. Not company-scoped (general knowledge base).
+
+**Request body** — same shape as `/chat` above.
+
+**Response 200 (relevant documents found)**
+```json
+{
+  "message": "Yes, the Fleet Visibility package includes alerting [4]...",
+  "citations": [
+    {
+      "number": 1,
+      "documentId": 7,
+      "title": "Fleet Visibility rollout package overview",
+      "sourcePath": "sample-data/documents/product-fleet-visibility.md",
+      "docType": "product",
+      "companyName": null,
+      "similarity": 0.809125,
+      "snippet": "Fleet Visibility is designed for logistics customers..."
+    }
+  ],
+  "provider": "cloud",
+  "usage": { "...": "see Usage object" }
+}
+```
+
+**Response 200 (nothing relevant found)** — no LLM call is made in this case:
+```json
+{
+  "message": "I could not find any ingested documents relevant to that question.",
+  "citations": [],
+  "provider": "cloud"
+}
+```
+
+---
+
+## `POST /api/v1/chat/crm`
+
+CRM copilot: a keyword-based classifier (`app/chat/router.py`) decides
+whether the question wants structured CRM facts, document retrieval, or
+both, and scopes retrieval to the named company (if any) so citations never
+leak across companies. Additive — never replaces `/chat` or `/chat/rag`.
+
+**Request body** — same shape as `/chat` above.
+
+**Response 200**
+```json
+{
+  "message": "Acme Fabrication has 2 open deals... [1]",
+  "facts": {
+    "id": 1,
+    "name": "Acme Fabrication",
+    "industry": "Manufacturing",
+    "relationshipStatus": "active",
+    "openDeals": [{ "id": 1, "name": "Renewal FY26", "amount": "25000.00", "status": "open", "expectedCloseDate": "2026-03-01" }],
+    "wonDealsCount": 3,
+    "lostDealsCount": 1
+  },
+  "citations": [ "..." ],
+  "scopedCompany": "Acme Fabrication",
+  "provider": "ollama",
+  "usage": { "...": "see Usage object" }
+}
+```
+
+`facts` is `null` and/or `citations` is `[]` when the question didn't need
+that part of the context. If neither facts nor documents matched anything,
+`message` is a canned "I could not find..." response with no LLM call.
+
+---
+
+## `GET /api/v1/llm/models`
+
+Lists OpenRouter's current free-tier models (used to populate the web UI's
+"OpenRouter model" dropdown) plus a couple of disabled example paid models,
+shown for reference only. Cached server-side for 5 minutes.
+
+**Response 200**
+```json
+{
+  "free": [{ "id": "liquid/lfm-2.5-2.6b:free", "name": "LiquidAI: LFM2.5-2.6B (free)" }],
+  "paid": [{ "id": "openai/gpt-4o-mini", "name": "OpenAI: GPT-4o-mini" }]
+}
+```
+
+**Response 503** — couldn't reach OpenRouter.
+
+---
+
+## `POST /api/v1/documents/ingest`
+
+Runs the full parse → chunk → embed → store pipeline over
+`sample-data/documents` into Qdrant (plus a `documents`/`ingestion_runs` row
+in Postgres).
+
+**Response 200**
+```json
+{ "ingestionRunId": 3, "documentsProcessed": 7, "chunksCreated": 42, "status": "completed" }
+```
+
+**Response 502** (partial/failed run — `status` is `"failed"`, body includes `error`)
+**Response 500** (the ingestion call itself raised)
+
+## `GET /api/v1/documents`
+
+Lists ingested documents with their chunk counts (debugging retrieval).
+
+```json
+[{ "id": 7, "title": "Fleet Visibility rollout package overview", "docType": "product", "sourcePath": "sample-data/documents/product-fleet-visibility.md", "companyName": null, "chunkCount": 6 }]
+```
+
+## `GET /api/v1/documents/ingestion-runs`
+
+Most recent 10 ingestion runs, most recent first.
+
+```json
+[{ "id": 3, "startedAt": "2026-10-10T09:00:00", "completedAt": "2026-10-10T09:00:12", "status": "completed", "embeddingModel": "gemini-embedding-001", "documentsProcessed": 7, "chunksCreated": 42, "error": null }]
+```
+
+---
+
+## Usage object (Stage 7)
+
+Every successful `/chat*` response includes a `usage` object — Stage 7's
+production telemetry: which provider/model actually answered (may differ
+from the request if automatic fallback kicked in), token counts, latency,
+and a rough cost estimate.
+
+```json
+{
+  "provider": "ollama",
+  "model": "qwen2.5:3b",
+  "tokensIn": 521,
+  "tokensOut": 37,
+  "latencyMs": 23841,
+  "estimatedCost": 0.0,
+  "fallbackUsed": true,
+  "fallbackFrom": "cloud"
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `provider` / `model` | The provider/model that actually generated the answer. |
+| `tokensIn` / `tokensOut` | From the provider's own response (`prompt_eval_count`/`eval_count` for Ollama, `usage.prompt_tokens`/`usage.completion_tokens` for OpenRouter). Can be `null` if the provider didn't report them. |
+| `latencyMs` | Wall-clock time for the provider HTTP call only (not including retrieval/DB time). |
+| `estimatedCost` | `0.0` for all current models (every OpenRouter model offered in the UI is free-tier; Ollama is always local/free). A real per-token price can be added per-model in `cloud.py`'s `OPENROUTER_PRICE_PER_1K_TOKENS` map without touching call sites. |
+| `fallbackUsed` / `fallbackFrom` | `true`/the original provider's name if the requested provider failed and this answer came from the automatic retry with the other provider instead. |
+
+---
+
+## Error shape
+
+Any non-2xx response has this body shape (both keys always present, same
+message):
+
+```json
+{
+  "error": "The cloud model (not-a-real-model) is currently unavailable: ...",
+  "detail": "The cloud model (not-a-real-model) is currently unavailable: ..."
+}
+```
+
+| Status | Meaning |
+| --- | --- |
+| 404 | Unknown resource (e.g. company id). |
+| 500 | Ingestion pipeline raised unexpectedly. |
+| 502 | Ingestion ran but did not complete successfully. |
+| 503 | Could not reach/complete an upstream call (DB, Qdrant, LLM provider, OpenRouter model list) — see the `error`/`detail` message for specifics; chat routes only return this if **both** the requested provider and its automatic fallback (Stage 7) failed. |

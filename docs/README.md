@@ -22,16 +22,16 @@ disrupting earlier ones.
 
 | Stage | Status | Document |
 | --- | --- | --- |
-| 4. Cloud LLM provider option | Planned | [04-cloud-llm-provider.md](part-2-grounded-intelligence/04-cloud-llm-provider.md) |
-| 5. Realistic CRM RAG | Planned | [05-realistic-crm-rag.md](part-2-grounded-intelligence/05-realistic-crm-rag.md) |
-| 6. Retrieval evaluation | Planned | [06-retrieval-evaluation.md](part-2-grounded-intelligence/06-retrieval-evaluation.md) |
+| 4. Cloud LLM provider option | Complete | [04-cloud-llm-provider.md](part-2-grounded-intelligence/04-cloud-llm-provider.md) |
+| 5. Realistic CRM RAG | Complete | [05-realistic-crm-rag.md](part-2-grounded-intelligence/05-realistic-crm-rag.md) |
+| 6. Retrieval evaluation | Complete | [06-retrieval-evaluation.md](part-2-grounded-intelligence/06-retrieval-evaluation.md) |
 
 ## Part III — Trust & Safety
 *Make it credible and safe before adding autonomy.*
 
 | Stage | Status | Document |
 | --- | --- | --- |
-| 7. Production concerns | Planned | [07-production-concerns.md](part-3-trust-safety/07-production-concerns.md) |
+| 7. Production concerns | Complete | [07-production-concerns.md](part-3-trust-safety/07-production-concerns.md) |
 | 8. Prompt-injection defense & guardrails | Planned | [08-prompt-injection-guardrails.md](part-3-trust-safety/08-prompt-injection-guardrails.md) |
 
 ## Part IV — Autonomy & Protocols
@@ -45,11 +45,13 @@ disrupting earlier ones.
 ## Baseline stack
 
 - Frontend: React + Vite + TypeScript
-- Backend: Express + TypeScript
+- Backend: FastAPI + Python (migrated from the original Express/TypeScript
+  API during the v2 stack migration — see [architecture.md](architecture.md))
 - Relational data: PostgreSQL 17 in Docker
+- Vector storage: Qdrant in Docker (document chunk embeddings)
 - Local inference: Ollama + Qwen2.5 3B in Docker
-- Cloud inference (Stage 4+): one free-tier provider (Groq/OpenRouter/Gemini),
-  swappable via configuration
+- Cloud inference (Stage 4+): OpenRouter, swappable via configuration or
+  per-request
 
 This is an intentionally small, original CRM. It uses only synthetic data and
 does not reproduce an existing CRM product.
@@ -62,6 +64,12 @@ active technology per capability (LLM inference, embeddings, vector storage,
 tool calling, guardrails, evaluation), what alternatives are already wired in
 as opt-in toggles, and other free options worth exploring — updated as new
 stages introduce new choices.
+
+See [architecture.md](architecture.md) for the system-level "how it all fits
+together" diagram (frontend/backend/Postgres/Qdrant/LLM providers, request
+flow, local-vs-Docker networking) and [api-reference.md](api-reference.md)
+for every HTTP endpoint's request/response shape, including the Stage 7
+usage/telemetry object and the shared error shape.
 
 ## Usage guide & troubleshooting
 
