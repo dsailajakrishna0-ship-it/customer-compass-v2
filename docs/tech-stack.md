@@ -97,9 +97,23 @@ information, organized the other way (by technology, not by stage).
   via this suite: clearly-irrelevant questions now retrieve zero chunks;
   genuinely relevant ones are unaffected.
 
-![Stage 7](https://img.shields.io/badge/Stage_7-Production_Concerns-lightgrey) **— planned**
-- Model fallback between providers, cost/latency tracking — design not
-  finalized yet.
+![Stage 7](https://img.shields.io/badge/Stage_7-Production_Concerns-success) **— done**
+- **Automatic cross-provider fallback**: if the requested provider (cloud or
+  ollama) raises — timeout, rate-limit, provider outage, invalid model, etc.
+  — `generate()` retries once with the other provider instead of surfacing a
+  503, and flags the result as a fallback (`usage.fallbackUsed`/`fallbackFrom`)
+  so it's visible, not silent.
+- **Per-request telemetry**: every chat response now includes a `usage`
+  object (actual provider/model used, input/output token counts, latency,
+  and a rough cost estimate — $0 today since the UI only offers free
+  OpenRouter models, but the `cloud.py` pricing map is wired for real costs
+  once paid models are enabled). Logged server-side (`llm_usage` log line)
+  and shown in the UI as a small footer under each answer.
+- Found and fixed along the way: the FastAPI migration's error responses
+  used `{"detail": ...}` while the frontend's contract (ported from the old
+  Express API) read `{"error": ...}`, so real backend errors silently showed
+  as a generic "Something went wrong." — added a global exception handler
+  to restore the `error` field (see PR #7).
 
 ![Stage 8](https://img.shields.io/badge/Stage_8-Prompt_Injection_Guardrails-lightgrey) **— planned**
 - Custom rule-based guard + delimited untrusted-content prompting.

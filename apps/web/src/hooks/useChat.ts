@@ -40,6 +40,7 @@ export function useChat(): {
             facts: body.facts,
             scopedCompany: body.scopedCompany,
             provider: body.provider,
+            usage: body.usage,
           },
         ]);
       })

@@ -77,6 +77,20 @@ export type LlmProvider = "ollama" | "cloud";
 /** "general" = Stage 2 plain chat, "rag" = Stage 3 document-grounded chat, "crm" = Stage 5 facts + citations. */
 export type ChatMode = "general" | "rag" | "crm";
 
+/** Stage 7: per-request telemetry (which provider/model actually answered,
+ * token counts, latency, a rough cost estimate, and whether automatic
+ * cross-provider fallback kicked in) returned alongside every chat answer. */
+export type ChatUsage = {
+  provider: LlmProvider;
+  model: string;
+  tokensIn: number | null;
+  tokensOut: number | null;
+  latencyMs: number;
+  estimatedCost: number | null;
+  fallbackUsed: boolean;
+  fallbackFrom: LlmProvider | null;
+};
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -84,6 +98,7 @@ export type ChatMessage = {
   facts?: CrmFact | null;
   scopedCompany?: string | null;
   provider?: LlmProvider;
+  usage?: ChatUsage;
 };
 
 export type ModelOption = { id: string; name: string };
@@ -103,4 +118,5 @@ export type ChatResponse = {
   facts?: CrmFact | null;
   scopedCompany?: string | null;
   provider?: LlmProvider;
+  usage?: ChatUsage;
 };
