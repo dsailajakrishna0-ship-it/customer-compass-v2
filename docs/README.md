@@ -71,6 +71,14 @@ flow, local-vs-Docker networking) and [api-reference.md](api-reference.md)
 for every HTTP endpoint's request/response shape, including the Stage 7
 usage/telemetry object and the shared error shape.
 
+## Testing guide
+
+See [testing-guide.md](testing-guide.md) for the single "how do I actually
+try this" doc: commands to start everything, URLs to open/monitor, every
+chat-mode × provider dropdown combination with sample questions and
+expected results, and quick curl-only checks for isolating UI vs. backend
+bugs.
+
 ## Usage guide & troubleshooting
 
 See [v2-startup-troubleshooting.md](v2-startup-troubleshooting.md) for how to
