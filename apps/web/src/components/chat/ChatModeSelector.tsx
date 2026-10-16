@@ -1,5 +1,6 @@
 import type { ChatMode, LlmProvider, ModelCatalog } from "../../types";
 import { MODE_COPY } from "../../context/ChatSessionContext";
+import { ModelPicker } from "./ModelPicker";
 
 type ChatModeSelectorProps = {
   chatMode: ChatMode;
@@ -48,20 +49,12 @@ export function ChatModeSelector({
       {provider === "cloud" && (
         <div className="provider-select">
           <label htmlFor="cloud-model-select">OpenRouter model:</label>
-          <select id="cloud-model-select" value={cloudModel} onChange={(event) => onChangeCloudModel(event.target.value)}>
-            <optgroup label="Free">
-              {cloudModels.free.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </optgroup>
-            {cloudModels.paid.length > 0 && (
-              <optgroup label="Paid (not selectable in this learning app)">
-                {cloudModels.paid.map((m) => (
-                  <option key={m.id} value={m.id} disabled className="paid-option">{m.name}</option>
-                ))}
-              </optgroup>
-            )}
-          </select>
+          <ModelPicker
+            id="cloud-model-select"
+            cloudModel={cloudModel}
+            onChangeCloudModel={onChangeCloudModel}
+            cloudModels={cloudModels}
+          />
         </div>
       )}
     </div>

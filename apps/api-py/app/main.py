@@ -13,8 +13,9 @@ unprefixed, same as it was in Express.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.db import close_pool, get_pool
 from app.rag.qdrant_store import close_client
@@ -32,6 +33,19 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Customer Compass API (Python)", lifespan=lifespan)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    """FastAPI's default HTTPException body is {"detail": ...}, but the
+    frontend's ChatResponse/error-handling contract (ported from the old
+    Express API) expects {"error": ...}. Without this, every backend error
+    (e.g. an OpenRouter free-model rate-limit, which already has a helpful
+    message) silently fell through to a generic "Something went wrong." in
+    the UI, because `body.error` was always undefined. Returning both keys
+    keeps FastAPI's default shape available while restoring the field the
+    frontend actually reads."""
+    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail, "detail": exc.detail})
 
 app.add_middleware(
     CORSMiddleware,
