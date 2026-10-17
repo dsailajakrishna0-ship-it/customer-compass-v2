@@ -60,7 +60,10 @@ three controls:
 There's **no company selector** — name the company in your question text
 and the app scopes retrieval to it automatically. Seeded companies:
 **Acme Fabrication** (customer), **Northstar Logistics** (lead), **Harbor &
-Pine** (customer).
+Pine** (customer), **Vertex Analytics** (customer), **Golden Valley Foods**
+(lead), **Summit Builders** (former_customer), **Riverside Health Group**
+(customer) — 7 companies total, 16 sample documents, including at least one
+`lost` deal (Summit Builders) and one `former_customer` relationship status.
 
 ### Combo 1 — General × Local/Cloud
 
