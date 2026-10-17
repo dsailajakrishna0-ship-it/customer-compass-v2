@@ -1,7 +1,7 @@
 """Smoke test for the FastAPI skeleton's /health endpoint.
 
 Requires a reachable Postgres (see apps/api-py/README or the repo-root
-docker-compose.yml: `docker-compose up -d db`), matching how apps/api's own
+docker-compose.yml: `docker compose up -d db`), matching how apps/api's own
 test suite assumes a live dependency isn't needed for unit tests but this
 integration-style check does need the real database.
 """

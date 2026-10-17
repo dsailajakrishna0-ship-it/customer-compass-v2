@@ -72,7 +72,7 @@ API, then refresh."* even though the API process is running.
 
 **Cause:** v2's `docker-compose.yml` initially reused v1's exact container
 name (`customer-compass-db`). If a stopped v1 `customer-compass-db` container
-already exists on the machine, `docker-compose up` fails to (re)create v2's
+already exists on the machine, `docker compose up` fails to (re)create v2's
 `db` with the same name — and depending on compose version, this can abort
 the whole `up` command partway (see #2 below).
 
@@ -81,9 +81,9 @@ matching the naming already used for `ollama`/`qdrant`. No action needed
 going forward — just make sure you're on a version of this repo that
 includes that fix.
 
-### 2. A failed service can silently abort the whole `docker-compose up`
+### 2. A failed service can silently abort the whole `docker compose up`
 
-**Symptom:** You ran `docker-compose up -d db qdrant ollama`, but afterwards
+**Symptom:** You ran `docker compose up -d db qdrant ollama`, but afterwards
 `ollama` (or another service) wasn't actually running — `docker ps` shows
 nothing, or `docker ps -a` shows it stuck in `Created` state (never
 `Started`).
@@ -93,12 +93,12 @@ container-name clash in #1), some Docker Compose versions skip starting the
 remaining services in that invocation entirely, even though they report
 "Created" successfully.
 
-**Lesson:** After *any* `docker-compose up`, don't just trust the command's
+**Lesson:** After *any* `docker compose up`, don't just trust the command's
 output — verify all expected containers are actually in the `Up` state:
 ```bash
 docker ps --format "{{.Names}}\t{{.Status}}"
 ```
-If something is missing or stuck at `Created`, re-run `docker-compose up -d
+If something is missing or stuck at `Created`, re-run `docker compose up -d
 <missing-service>` explicitly for just that service.
 
 ### 3. Full startup needs three containers, not just `db`
@@ -109,14 +109,14 @@ request will fail (500/503) because Ollama (generation) isn't reachable.
 
 Always start all three together:
 ```bash
-docker-compose up -d db qdrant ollama
+docker compose up -d db qdrant ollama
 ```
 
 ### 4. v1 and v2 can't run `db`/`ollama` at the same time
 
 Both repos' Postgres and Ollama services bind the **same host ports** (5432,
 11435) regardless of container name. Only one stack (v1 or v2) can have
-these services running at once — stop one (`docker-compose down`) before
+these services running at once — stop one (`docker compose down`) before
 starting the other.
 
 ### 5. `apps/api-py/.env` is per-repo, not shared
@@ -131,7 +131,7 @@ reusing the same key:
 cp ../customer-compass/apps/api/.env apps/api-py/.env
 # and/or add it to the repo-root .env if running via docker-compose
 ```
-Then restart the service (`docker-compose up -d --build api-py`, or
+Then restart the service (`docker compose up -d --build api-py`, or
 `uv run uvicorn app.main:app --reload --port 8001` for local dev) — env
 vars are loaded once at process start, not hot-reloaded on `.env` changes.
 

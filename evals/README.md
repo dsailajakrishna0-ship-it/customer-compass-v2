@@ -46,7 +46,7 @@ checks for instead of expecting zero citations in that case.
 
 ## Running
 
-Requires the full stack up (`docker-compose up -d db qdrant ollama api-py`
+Requires the full stack up (`docker compose up -d db qdrant ollama api-py`
 from the repo root) with sample data already ingested
 (`curl -X POST http://localhost:8001/api/v1/documents/ingest`, see the root
 README if you haven't run this before).

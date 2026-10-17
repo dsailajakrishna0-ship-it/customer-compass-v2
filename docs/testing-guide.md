@@ -13,7 +13,7 @@ clicking around and testing.
 cd /home/devarapallim/Murali/git-personal/customer-compass-v2
 
 # Backend stack: Postgres, Qdrant, Ollama, the FastAPI service
-docker-compose up -d db qdrant ollama api-py
+docker compose up -d db qdrant ollama api-py
 
 # First time only (or after a DB/Ollama volume reset): pull the local model
 docker exec customer-compass-v2-ollama ollama pull qwen2.5:3b
@@ -25,7 +25,7 @@ cd apps/web && npm run dev
 If you rebuilt backend code (anything under `apps/api-py/app/`), rebuild the
 container instead of relying on a stale image:
 ```bash
-docker-compose up -d --build api-py
+docker compose up -d --build api-py
 ```
 
 Frontend code changes hot-reload automatically — no restart needed while
@@ -42,13 +42,13 @@ Stop the frontend dev server first (`Ctrl+C` in its terminal), then stop the
 Docker stack:
 
 ```bash
-docker-compose stop
+docker compose stop
 ```
 
 `stop` keeps containers/volumes around (data persists, e.g. ingested
 documents and seeded CRM rows) so the next session starts fast — just re-run
-the `docker-compose up -d ...` command above to resume. Only use
-`docker-compose down -v` if you deliberately want to wipe the Postgres/Qdrant
+the `docker compose up -d ...` command above to resume. Only use
+`docker compose down -v` if you deliberately want to wipe the Postgres/Qdrant
 volumes and reseed from scratch (e.g. after an `init.sql` change).
 
 ## 2. URLs to open and monitor
@@ -59,7 +59,7 @@ volumes and reseed from scratch (e.g. after an `init.sql` change).
 | `http://localhost:8001/health` | Backend health check — confirms the API is up and can reach Postgres. |
 | `http://localhost:8001/docs` | Live interactive Swagger UI for every API endpoint — good for poking at the API directly without the frontend. |
 | `http://localhost:6333/dashboard` | Qdrant's built-in web UI — inspect the `document_chunks` collection, point counts, payloads. |
-| `docker-compose logs -f api-py` | Backend request/error logs, including the `llm_usage` line (Stage 7 telemetry) logged on every chat answer. |
+| `docker compose logs -f api-py` | Backend request/error logs, including the `llm_usage` line (Stage 7 telemetry) logged on every chat answer. |
 | `docker ps --format "{{.Names}}\t{{.Status}}"` | Confirms all 4 containers (`db`, `qdrant`, `ollama`, `api-py`) are actually `Up`, not silently stuck in `Created`. |
 
 ## 3. The dropdowns, and what each combination means

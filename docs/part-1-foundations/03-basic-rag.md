@@ -122,7 +122,7 @@ the product overview and the matching support conversation.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db ollama
+docker compose up -d db ollama
 ```
 
 - **First time / fresh volume**: `db/init.sql` and `db/002-rag.sql` both run

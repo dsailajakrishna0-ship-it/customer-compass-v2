@@ -6,7 +6,7 @@
 # If no prior cache is found, a fresh volume name is written instead and
 # models will be pulled on first use, as normal.
 #
-# Usage: run once before `docker-compose up`:
+# Usage: run once before `docker compose up`:
 #   ./scripts/setup-ollama-cache.sh
 
 set -euo pipefail
