@@ -23,6 +23,18 @@ function UsageFootnote({ usage }: { usage: NonNullable<ChatMessage["usage"]> }) 
   );
 }
 
+/** Stage 8: renders a visible warning when the prompt-injection guardrail
+ * flagged and neutralized something (in the user's message or a retrieved
+ * document), so a detected attempt is obvious rather than silently handled. */
+function GuardrailWarning({ guardrail }: { guardrail: NonNullable<ChatMessage["guardrail"]> }) {
+  if (!guardrail.flagged) return null;
+  return (
+    <p className="usage-fallback-tag" title={guardrail.reasons.join(", ")}>
+      ⚠ Potential prompt injection detected and neutralized before answering.
+    </p>
+  );
+}
+
 /** A single chat bubble: message text, optional provider tag, optional CRM facts panel, optional citations. */
 export function MessageBubble({ message }: { message: ChatMessage }) {
   return (
@@ -32,6 +44,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
         <p className="provider-tag">via {message.provider === "cloud" ? "Cloud (OpenRouter)" : "Local (Ollama)"}</p>
       )}
       {message.role === "assistant" && message.usage && <UsageFootnote usage={message.usage} />}
+      {message.role === "assistant" && message.guardrail && <GuardrailWarning guardrail={message.guardrail} />}
       {message.scopedCompany && <p className="provider-tag">Scoped to: {message.scopedCompany}</p>}
       {message.facts && <CrmFactsPanel facts={message.facts} />}
       {message.citations && message.citations.length > 0 && <CitationList citations={message.citations} />}

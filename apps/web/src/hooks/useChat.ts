@@ -41,6 +41,7 @@ export function useChat(): {
             scopedCompany: body.scopedCompany,
             provider: body.provider,
             usage: body.usage,
+            guardrail: body.guardrail,
           },
         ]);
       })
