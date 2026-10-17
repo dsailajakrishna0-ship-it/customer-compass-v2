@@ -36,6 +36,21 @@ documents** (top-left of the dashboard) once, so RAG/CRM modes have
 something to retrieve. You only need to repeat this if the database or
 Qdrant volume gets reset.
 
+### Stopping everything when you're done testing
+
+Stop the frontend dev server first (`Ctrl+C` in its terminal), then stop the
+Docker stack:
+
+```bash
+docker-compose stop
+```
+
+`stop` keeps containers/volumes around (data persists, e.g. ingested
+documents and seeded CRM rows) so the next session starts fast — just re-run
+the `docker-compose up -d ...` command above to resume. Only use
+`docker-compose down -v` if you deliberately want to wipe the Postgres/Qdrant
+volumes and reseed from scratch (e.g. after an `init.sql` change).
+
 ## 2. URLs to open and monitor
 
 | URL | What it's for |
