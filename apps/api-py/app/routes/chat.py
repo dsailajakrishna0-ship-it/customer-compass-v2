@@ -1,6 +1,7 @@
 """Chat routes: general chat, grounded RAG, and CRM copilot (ported from
 apps/api/src/routes/chat.ts)."""
 
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
@@ -9,9 +10,11 @@ from pydantic import BaseModel, Field, field_validator
 from app.chat.router import classify_query
 from app.crm.queries import get_company_summary
 from app.llm.provider import DEFAULT_LLM_PROVIDER, ChatMessage, LlmProvider, generate
+from app.llm.types import GenerationResult
 from app.rag.retrieve import build_context, retrieve_relevant_chunks
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+logger = logging.getLogger("app.routes.chat")
 
 GENERAL_SYSTEM_PROMPT = """You are Compass, a helpful assistant inside a CRM learning application.
 You do not have access to any CRM customer data yet. Be transparent about that.
@@ -73,6 +76,25 @@ def _citation(i: int, chunk) -> dict:
     }
 
 
+def _usage_json(result: GenerationResult) -> dict:
+    """Stage 7 "production concerns" telemetry: which provider/model actually
+    answered (may differ from the request if fallback kicked in), token
+    counts, latency, and a rough cost estimate. Logged server-side and
+    returned to the frontend so it can show a small per-answer footer."""
+    usage = {
+        "provider": result.provider,
+        "model": result.model,
+        "tokensIn": result.tokens_in,
+        "tokensOut": result.tokens_out,
+        "latencyMs": result.latency_ms,
+        "estimatedCost": result.estimated_cost,
+        "fallbackUsed": result.fallback_used,
+        "fallbackFrom": result.fallback_from,
+    }
+    logger.info("llm_usage %s", usage)
+    return usage
+
+
 def _facts_json(facts) -> dict | None:
     """Converts CompanySummary to the same camelCase shape the Express API
     returns, so the frontend's response types don't need to change here."""
@@ -103,8 +125,8 @@ async def general_chat(body: ChatRequest):
     """General-purpose chat, no CRM/document grounding (Stage 2 behavior)."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     try:
-        message = await generate(GENERAL_SYSTEM_PROMPT, body.message_dicts, resolved_provider, body.model)
-        return {"message": message, "provider": resolved_provider}
+        result = await generate(GENERAL_SYSTEM_PROMPT, body.message_dicts, resolved_provider, body.model)
+        return {"message": result.content, "provider": result.provider, "usage": _usage_json(result)}
     except Exception as exc:  # noqa: BLE001 - surfaced as a clear 503, mirrors the Express route
         raise HTTPException(
             status_code=503,
@@ -133,9 +155,14 @@ async def rag_chat(body: ChatRequest):
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
         ]
 
-        message = await generate(GROUNDED_SYSTEM_PROMPT, augmented_messages, resolved_provider, body.model)
+        result = await generate(GROUNDED_SYSTEM_PROMPT, augmented_messages, resolved_provider, body.model)
         citations = [_citation(i, chunk) for i, chunk in enumerate(chunks)]
-        return {"message": message, "citations": citations, "provider": resolved_provider}
+        return {
+            "message": result.content,
+            "citations": citations,
+            "provider": result.provider,
+            "usage": _usage_json(result),
+        }
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=str(exc) or "Could not answer with retrieval.") from exc
 
@@ -193,15 +220,16 @@ async def crm_chat(body: ChatRequest):
             {"role": "user", "content": f"{chr(10).join(context_parts)}\n\nQuestion: {question}"},
         ]
 
-        message = await generate(CRM_SYSTEM_PROMPT, augmented_messages, resolved_provider, body.model)
+        result = await generate(CRM_SYSTEM_PROMPT, augmented_messages, resolved_provider, body.model)
         citations = [_citation(i, chunk) for i, chunk in enumerate(chunks)]
 
         return {
-            "message": message,
+            "message": result.content,
             "facts": _facts_json(facts),
             "citations": citations,
             "scopedCompany": route.company.name if route.company else None,
-            "provider": resolved_provider,
+            "provider": result.provider,
+            "usage": _usage_json(result),
         }
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=str(exc) or "Could not answer the CRM question.") from exc
