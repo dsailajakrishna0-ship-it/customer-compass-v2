@@ -101,7 +101,8 @@ tells the model it has no CRM access.
 {
   "message": "I can answer general questions, but I don't have access to your CRM data yet.",
   "provider": "ollama",
-  "usage": { "...": "see Usage object" }
+  "usage": { "...": "see Usage object" },
+  "guardrail": { "...": "see Guardrail object" }
 }
 ```
 
@@ -132,7 +133,8 @@ document chunks from Qdrant, and grounds the answer in them with required
     }
   ],
   "provider": "cloud",
-  "usage": { "...": "see Usage object" }
+  "usage": { "...": "see Usage object" },
+  "guardrail": { "...": "see Guardrail object" }
 }
 ```
 
@@ -141,7 +143,8 @@ document chunks from Qdrant, and grounds the answer in them with required
 {
   "message": "I could not find any ingested documents relevant to that question.",
   "citations": [],
-  "provider": "cloud"
+  "provider": "cloud",
+  "guardrail": { "...": "see Guardrail object" }
 }
 ```
 
@@ -172,7 +175,8 @@ leak across companies. Additive — never replaces `/chat` or `/chat/rag`.
   "citations": [ "..." ],
   "scopedCompany": "Acme Fabrication",
   "provider": "ollama",
-  "usage": { "...": "see Usage object" }
+  "usage": { "...": "see Usage object" },
+  "guardrail": { "...": "see Guardrail object" }
 }
 ```
 
@@ -259,6 +263,37 @@ and a rough cost estimate.
 | `latencyMs` | Wall-clock time for the provider HTTP call only (not including retrieval/DB time). |
 | `estimatedCost` | `0.0` for all current models (every OpenRouter model offered in the UI is free-tier; Ollama is always local/free). A real per-token price can be added per-model in `cloud.py`'s `OPENROUTER_PRICE_PER_1K_TOKENS` map without touching call sites. |
 | `fallbackUsed` / `fallbackFrom` | `true`/the original provider's name if the requested provider failed and this answer came from the automatic retry with the other provider instead. |
+
+---
+
+## Guardrail object (Stage 8)
+
+Every successful `/chat*` response also includes a `guardrail` object —
+Stage 8's prompt-injection telemetry: whether the rule-based guard found
+and neutralized anything in the user's message and/or a retrieved document
+before it reached the LLM.
+
+```json
+{
+  "flagged": true,
+  "reasons": [
+    "override_instructions (user_input)",
+    "reveal_system_prompt (document: Fleet Visibility rollout package overview)"
+  ]
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `flagged` | `true` if any scanned text (the user's message, and for `/chat/rag`/`/chat/crm` each retrieved document chunk) matched a known injection pattern. |
+| `reasons` | One entry per match: `"<pattern_name> (<location>)"`. `location` is `"user_input"` or `"document: <document title>"`. Empty list when `flagged` is `false`. |
+
+Flagged text is **neutralized, not blocked** — the matched phrase is
+redacted before reaching the LLM, but the request still proceeds and still
+returns an answer. Citations in the response still show the **original,
+un-redacted** document content, so you can see exactly what was retrieved.
+See [part-3-trust-safety/08-prompt-injection-guardrails.md](part-3-trust-safety/08-prompt-injection-guardrails.md)
+for the full design and manual test steps.
 
 ---
 
