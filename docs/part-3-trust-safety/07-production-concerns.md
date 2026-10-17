@@ -68,7 +68,7 @@ for how this fits into the overall request flow.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass-v2
-docker-compose up -d db qdrant ollama api-py
+docker compose up -d db qdrant ollama api-py
 cd apps/web && npm run dev
 ```
 

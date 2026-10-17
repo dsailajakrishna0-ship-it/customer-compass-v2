@@ -31,7 +31,7 @@ Useful commands:
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db
+docker compose up -d db
 npm run dev
 ```
 
@@ -49,7 +49,7 @@ npm run dev
 Useful commands:
 
 ```bash
-docker-compose up -d db ollama
+docker compose up -d db ollama
 docker exec customer-compass-ollama ollama pull qwen2.5:3b
 npm run dev
 ```
@@ -83,7 +83,7 @@ npm run dev
 Useful commands:
 
 ```bash
-docker-compose up -d db ollama
+docker compose up -d db ollama
 docker exec -i customer-compass-db psql -U customer_compass -d customer_compass < db/002-rag.sql  # existing volumes only
 docker exec customer-compass-ollama ollama pull mxbai-embed-large
 npm run dev
