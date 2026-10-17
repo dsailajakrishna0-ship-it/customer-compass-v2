@@ -146,12 +146,27 @@ curl -s -X POST http://localhost:8001/api/v1/chat/crm \
   -d '{"messages":[{"role":"user","content":"What open deals does Acme Fabrication have?"}],"provider":"ollama"}' \
   | python3 -m json.tool
 
-# Force a fallback (Stage 7) — expect HTTP 200, usage.fallbackUsed: true
+# Force a fallback (Stage 7) — an invalid cloud model fails over to Ollama
 curl -s -X POST http://localhost:8001/api/v1/chat/rag \
   -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"test"}],"provider":"cloud","model":"not-a-real-model"}' \
+  -d '{"messages":[{"role":"user","content":"Does the Fleet Visibility package include alerting?"}],"provider":"cloud","model":"not-a-real-model"}' \
   | python3 -m json.tool
 ```
+
+**Expect** (verified 2026-10-17): HTTP 200, a real cited answer (not an
+error), and:
+```json
+"provider": "ollama",
+"usage": {
+  "provider": "ollama",
+  "model": "qwen2.5:3b",
+  "fallbackUsed": true,
+  "fallbackFrom": "cloud"
+}
+```
+`provider` at the top level flips to `"ollama"` (the provider that actually
+answered), even though the request asked for `"cloud"` — this is the
+auto-retry in action, not a bug.
 
 ## 5. Related docs
 
