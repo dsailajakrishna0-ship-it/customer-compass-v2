@@ -45,7 +45,7 @@ Invalid company IDs return `400`; unknown IDs return `404`.
 ## Local workflow
 
 ```bash
-docker-compose up -d db
+docker compose up -d db
 npm install
 npm run dev
 ```

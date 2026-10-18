@@ -98,7 +98,7 @@ between them.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db ollama
+docker compose up -d db ollama
 cd apps/api
 cp .env.example .env
 # edit .env: set OPENROUTER_API_KEY to your own free key from

@@ -114,7 +114,7 @@ the UI.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass-v2
-docker-compose up -d db qdrant ollama api-py
+docker compose up -d db qdrant ollama api-py
 cd apps/web && npm run dev
 ```
 

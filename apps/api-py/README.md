@@ -38,7 +38,7 @@ cp .env.example .env    # then edit: DATABASE_URL, QDRANT_URL, GOOGLE_API_KEY, O
 uv run uvicorn app.main:app --reload --port 8001
 ```
 
-Requires Postgres, Qdrant, and Ollama running: `docker-compose up -d db
+Requires Postgres, Qdrant, and Ollama running: `docker compose up -d db
 qdrant ollama` (from the repo root). Get a free `GOOGLE_API_KEY` at
 https://aistudio.google.com/apikey — needed for `/api/v1/documents/ingest`
 (not for `/health`). Get a free `OPENROUTER_API_KEY` at

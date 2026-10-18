@@ -50,7 +50,7 @@ The model is downloaded once into the Docker volume:
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db ollama
+docker compose up -d db ollama
 docker exec customer-compass-ollama ollama pull qwen2.5:3b
 npm run dev
 ```

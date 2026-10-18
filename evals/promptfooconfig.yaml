@@ -4,7 +4,7 @@ description: >
   sample-data/documents corpus: does retrieval find the right source(s),
   does the LLM ground its answer in them (with correct company-scoping
   isolation), and does it correctly decline to answer when nothing relevant
-  is in the corpus? Run against a running `docker-compose up -d db qdrant
+  is in the corpus? Run against a running `docker compose up -d db qdrant
   ollama api-py` stack (see README.md in this directory for usage).
 
 providers:

@@ -32,7 +32,7 @@ deterministic retrieval metrics.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db ollama
+docker compose up -d db ollama
 npm install
 npm run dev
 ```

@@ -47,7 +47,7 @@ Invalid company IDs return `400`; unknown IDs return `404`.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db
+docker compose up -d db
 npm install
 npm run dev
 ```

@@ -90,7 +90,7 @@ Changed/added files:
 Useful commands:
 
 ```bash
-docker-compose up -d db ollama
+docker compose up -d db ollama
 docker exec customer-compass-ollama ollama pull mxbai-embed-large
 curl -X POST http://localhost:3001/api/documents/ingest
 ```
@@ -104,7 +104,7 @@ works.
 
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass
-docker-compose up -d db ollama
+docker compose up -d db ollama
 ```
 
 - **First time / fresh volume**: `db/init.sql` and `db/002-rag.sql` both run
