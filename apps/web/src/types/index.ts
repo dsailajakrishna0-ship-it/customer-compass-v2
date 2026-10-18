@@ -91,6 +91,16 @@ export type ChatUsage = {
   fallbackFrom: LlmProvider | null;
 };
 
+/** Stage 8: reports whether the rule-based prompt-injection guardrail
+ * flagged and neutralized anything in the user's message and/or a
+ * retrieved document before it reached the LLM. `reasons` is a list of
+ * "pattern_name (location)" strings for transparency, e.g.
+ * "override_instructions (document: Fleet Visibility overview)". */
+export type ChatGuardrail = {
+  flagged: boolean;
+  reasons: string[];
+};
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -99,6 +109,7 @@ export type ChatMessage = {
   scopedCompany?: string | null;
   provider?: LlmProvider;
   usage?: ChatUsage;
+  guardrail?: ChatGuardrail;
 };
 
 export type ModelOption = { id: string; name: string };
@@ -119,4 +130,5 @@ export type ChatResponse = {
   scopedCompany?: string | null;
   provider?: LlmProvider;
   usage?: ChatUsage;
+  guardrail?: ChatGuardrail;
 };
