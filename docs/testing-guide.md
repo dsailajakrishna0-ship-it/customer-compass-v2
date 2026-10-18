@@ -390,3 +390,4 @@ legitimate part), does not reveal its system prompt, and:
 | [part-2-grounded-intelligence/06-retrieval-evaluation.md](part-2-grounded-intelligence/06-retrieval-evaluation.md) + [../evals/README.md](../evals/README.md) | The automated promptfoo eval suite, if you want to run these same kinds of checks without manual clicking. |
 | [part-3-trust-safety/07-production-concerns.md](part-3-trust-safety/07-production-concerns.md) | Stage 7 fallback/telemetry design + its own manual test steps. |
 | [part-3-trust-safety/08-prompt-injection-guardrails.md](part-3-trust-safety/08-prompt-injection-guardrails.md) | Stage 8 guardrail design (threat model, neutralize-and-warn behavior) + indirect-injection manual test steps. |
+| [part-4-autonomy-protocols/09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md) | Stage 9 MCP tool-calling design (server/client, confirmation gate, hand-rolled tool-call protocol) + the real bug caught during manual testing. |
