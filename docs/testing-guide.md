@@ -111,7 +111,7 @@ route doesn't retrieve anything) — the first gives a real "Paris" answer,
 the second should explicitly say it has no access to CRM/deal data rather
 than inventing a deal.
 
-
+### Combo 2 — RAG × Local/Cloud
 
 Grounded only in ingested documents, with required `[n]` citations. Not
 company-scoped by default — citations can span companies unless your
@@ -151,7 +151,7 @@ instead, that's also fine (both are documented/acceptable outcomes
 depending on borderline scoring); what would be a real bug is the model
 claiming the cited documents discuss France.
 
-
+### Combo 3 — CRM copilot × Local/Cloud
 
 Routes the question to structured DB facts, document retrieval, or both,
 and scopes retrieval to the named company. The most "real assistant" mode.
@@ -188,7 +188,7 @@ null`, `"citations": []`, `"scopedCompany": null`, and the canned
 "could not find a matching company or deal data" message — never an
 invented company or deal.
 
-
+### Combo 4 — Prompt-injection guardrail (Stage 8, any mode/provider)
 
 Not a dropdown combination — this cuts across all modes. Try adversarial
 phrasing directly in the chat box:
