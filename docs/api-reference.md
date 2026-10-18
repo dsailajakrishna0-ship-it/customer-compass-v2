@@ -186,6 +186,41 @@ that part of the context. If neither facts nor documents matched anything,
 
 ---
 
+## `POST /api/v1/chat/tools`
+
+Stage 9 tool-calling copilot: the model can call MCP tools
+(`get_company_summary`, `get_open_deals`, `search_documents`,
+`create_followup_task`) mid-conversation via a hand-rolled fenced
+` ```tool_call ``` ` text protocol, instead of context being stuffed into
+the prompt upfront like `/chat/rag`/`/chat/crm`. Additive — never replaces
+the other three chat routes.
+
+**Request body** — same shape as `/chat` above.
+
+**Response 200**
+```json
+{
+  "message": "Acme Fabrication has one open deal: Premium Operations Plan renewal ($48,000.00, expected close 2026-10-15).",
+  "toolsUsed": [
+    { "tool": "get_open_deals", "arguments": { "company_name": "Acme Fabrication" } }
+  ],
+  "provider": "ollama",
+  "usage": { "...": "see Usage object" },
+  "guardrail": { "...": "see Guardrail object" }
+}
+```
+
+`toolsUsed` is `[]` if the model answered without calling any tool. For
+`create_followup_task`, `arguments.confirm` reflects whether the *system*
+(not the model) determined the user's latest message was an explicit
+confirmation — `false` means the task was only proposed (see
+`GET /api/v1/tool-audit-log` below), `true` means it was actually written
+to `tasks`. See
+[part-4-autonomy-protocols/09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md)
+for the full design and manual test steps.
+
+---
+
 ## `GET /api/v1/llm/models`
 
 Lists OpenRouter's current free-tier models (used to populate the web UI's
@@ -233,6 +268,39 @@ Most recent 10 ingestion runs, most recent first.
 ```json
 [{ "id": 3, "startedAt": "2026-10-10T09:00:00", "completedAt": "2026-10-10T09:00:12", "status": "completed", "embeddingModel": "gemini-embedding-001", "documentsProcessed": 7, "chunksCreated": 42, "error": null }]
 ```
+
+---
+
+## `GET /api/v1/tasks`
+
+Stage 9: lists follow-up tasks created by `create_followup_task` (only
+appears here once confirmed — a merely-proposed task is tracked only in
+`tool_audit_log`, below). Optional `?company_id=` filter.
+
+```json
+[{ "id": 3, "company_id": 2, "company_name": "Northstar Logistics", "note": "Send Q4 pricing sheet", "status": "open", "created_at": "2026-10-18 17:59:44.804461+00" }]
+```
+
+## `GET /api/v1/tool-audit-log`
+
+Stage 9: every MCP tool invocation (read and mutating), most recent first.
+Optional `?limit=` (default 50).
+
+```json
+[{
+  "id": 10,
+  "tool_name": "create_followup_task",
+  "arguments": { "company_name": "Northstar Logistics", "note": "Send Q4 pricing sheet", "confirm": true },
+  "status": "confirmed",
+  "result_summary": "Created task #3 for Northstar Logistics",
+  "company_id": 2,
+  "created_at": "2026-10-18 17:59:44.811977+00"
+}]
+```
+
+`status` is one of `executed` (read tools), `proposed`/`confirmed`
+(`create_followup_task`'s two-step flow), or `error` (e.g. company not
+found).
 
 ---
 

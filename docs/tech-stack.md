@@ -141,12 +141,32 @@ information, organized the other way (by technology, not by stage).
   injected instruction, and the guardrail correctly flagged the attempt
   with its source location.
 
-![Stage 9](https://img.shields.io/badge/Stage_9-Tool_Calling_MCP-lightgrey) **— planned**
-- MCP (Model Context Protocol) — provider-agnostic tool calling, matching how
-  modern AI tools (including this CLI) expose tools today.
+![Stage 9](https://img.shields.io/badge/Stage_9-Tool_Calling_MCP-brightgreen) **— done**
+- **MCP (Model Context Protocol)** — a standalone `MCPServer` (stdio
+  subprocess) exposes 4 tools: `get_company_summary`, `get_open_deals`,
+  `search_documents` (read), `create_followup_task` (mutating, proposal-
+  then-confirm). MCP owns tool schema/discovery/execution; the client
+  passes through the full parent environment since MCP's default stdio env
+  is a minimal allowlist that would otherwise strip `GOOGLE_API_KEY`/
+  `DATABASE_URL`/etc.
+- **Hand-rolled, provider-agnostic tool-call protocol** on top of MCP: a
+  fenced ` ```tool_call ``` ` JSON block the model emits mid-conversation,
+  looped up to 4 iterations, since not every provider (especially small
+  free local/OpenRouter models) has native function-calling — matches the
+  project's "hand-build it to understand it" philosophy rather than
+  branching per-provider.
+- **User-side confirmation gate**: the chat route (not the model) decides
+  whether `create_followup_task` actually writes to the DB, based on an
+  affirmative-keyword check against the user's own latest message —
+  verified against a real bug where the model initially *claimed* success
+  without a second tool call actually confirming it.
+- Every tool call (read and mutating) is recorded in a `tool_audit_log`
+  table, readable via `GET /api/v1/tool-audit-log`; confirmed tasks land in
+  a new `tasks` table, readable via `GET /api/v1/tasks`.
 
 ![Stage 10](https://img.shields.io/badge/Stage_10-Agentic_Assistant-lightgrey) **— planned**
 - Not yet designed.
+
 
 ## LLM inference (chat/completion)
 
@@ -217,11 +237,17 @@ Free options worth exploring later:
 
 | | Technology | Status |
 | --- | --- | --- |
-| **Planned (default)** | MCP (Model Context Protocol) | Stage 9 |
+| **Active (default)** | MCP (Model Context Protocol) server/client + a hand-rolled fenced-JSON tool-call text protocol on top | Stage 9 |
 | **Alternative worth knowing** | Native provider function-calling (OpenAI/Anthropic/Gemini function-calling schemas) | Not wired in — reference only |
 
-MCP is the standard used going forward because it is provider-agnostic and
-matches how modern AI tools (including this CLI) expose tools today.
+MCP is the standard used because it is provider-agnostic and matches how
+modern AI tools (including this CLI) expose tools today. It standardizes
+tool *schema, discovery, and execution* — but not how a given LLM signals a
+tool call, which differs (or is absent) per provider/model. Since this
+project targets small free models (`qwen2.5:3b`, free OpenRouter models)
+that don't reliably support native function-calling, a hand-rolled fenced
+` ```tool_call ``` ` JSON block (parsed by the chat route, executed through
+the real MCP client) bridges that gap instead of branching per provider.
 
 ## Guardrails / prompt-injection defense
 

@@ -33,6 +33,31 @@ CREATE TABLE interactions (
   summary TEXT NOT NULL
 );
 
+-- Stage 9 (tool calling / MCP): follow-up tasks the model can propose via the
+-- create_followup_task tool. A row only appears here once a proposal has been
+-- explicitly confirmed by the user -- a "proposed, not yet confirmed" action
+-- is tracked only in tool_audit_log, never written here.
+CREATE TABLE tasks (
+  id SERIAL PRIMARY KEY,
+  company_id INTEGER NOT NULL REFERENCES companies(id),
+  note TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Stage 9: durable record of every MCP tool invocation (read and mutating),
+-- so tool usage has a queryable history the same way Stage 7 (usage) and
+-- Stage 8 (guardrail) telemetry do, rather than log-lines-only.
+CREATE TABLE tool_audit_log (
+  id SERIAL PRIMARY KEY,
+  tool_name TEXT NOT NULL,
+  arguments JSONB NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('executed', 'proposed', 'confirmed', 'error')),
+  result_summary TEXT,
+  company_id INTEGER REFERENCES companies(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 INSERT INTO companies (name, industry, website, relationship_status) VALUES
   ('Acme Fabrication', 'Manufacturing', 'https://acme-fabrication.example', 'customer'),
   ('Northstar Logistics', 'Logistics', 'https://northstar-logistics.example', 'lead'),

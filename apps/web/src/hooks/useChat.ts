@@ -42,6 +42,7 @@ export function useChat(): {
             provider: body.provider,
             usage: body.usage,
             guardrail: body.guardrail,
+            toolsUsed: body.toolsUsed,
           },
         ]);
       })

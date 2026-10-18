@@ -237,6 +237,59 @@ exact JSON the frontend reads to decide whether to render the orange tag —
 useful for telling "is this a backend detection bug or a UI rendering bug"
 apart if something looks wrong on screen.
 
+### Combo 5 — Tool-calling copilot (Stage 9, any mode/provider)
+
+Select **"Tool-calling copilot (MCP)"** from the chat-mode dropdown. Unlike
+Combos 1–3, the model can call live tools mid-conversation instead of
+everything being stuffed into the prompt upfront.
+
+| Ask | Expect |
+| --- | --- |
+| *"What open deals does Acme Fabrication have?"* | A "🔧 Tools used: get_open_deals(company_name: Acme Fabrication)" trail appears under the answer, and the answer matches the real deal data (not invented). |
+| *"Search for anything about alerting limits."* | Trail shows `search_documents(...)`; answer reflects real retrieved document content. |
+| *"Create a follow-up task for Acme Fabrication to check in about the renewal next month."* | Trail shows `create_followup_task(..., confirm: False)`; the reply proposes the task and asks you to confirm — **no task is created yet**. |
+| Reply *"yes, confirm it"* | Trail shows `create_followup_task(..., confirm: True)`; the reply confirms the task was created. |
+
+**Same flow via curl** (one call to propose, one to confirm — note the
+second call includes the prior assistant message in `messages` so the model
+has the proposal in context):
+
+```bash
+# Propose — read-tool example first
+curl -s -X POST http://localhost:8001/api/v1/chat/tools \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"What open deals does Acme Fabrication have?"}],"provider":"ollama"}' \
+  | python3 -m json.tool
+
+# Propose a follow-up task (mutating tool, not yet confirmed)
+curl -s -X POST http://localhost:8001/api/v1/chat/tools \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Create a follow-up task for Acme Fabrication to check in about the renewal next month."}],"provider":"ollama"}' \
+  | python3 -m json.tool
+
+# Confirm it (paste the prior assistant reply into the second message)
+curl -s -X POST http://localhost:8001/api/v1/chat/tools \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Create a follow-up task for Acme Fabrication to check in about the renewal next month."},{"role":"assistant","content":"I have proposed that task. Please confirm."},{"role":"user","content":"yes, confirm it"}],"provider":"ollama"}' \
+  | python3 -m json.tool
+
+# Verify the task actually landed in the tasks table
+curl -s http://localhost:8001/api/v1/tasks | python3 -m json.tool
+
+# Verify the full audit trail (proposed -> confirmed)
+curl -s "http://localhost:8001/api/v1/tool-audit-log?limit=5" | python3 -m json.tool
+```
+
+**Expect**: the first call's `toolsUsed` shows `get_open_deals`; the second
+shows `create_followup_task` with `"confirm": false` and `/tasks` is
+unchanged; the third shows `"confirm": true` and a new row appears in
+`/tasks`; `/tool-audit-log` shows matching `proposed` then `confirmed`
+entries. The Stage 8 guardrail still applies here too — an injection
+attempt in the question gets flagged/neutralized exactly like Combos 1-4,
+while the legitimate tool-based question is still answered. See
+`docs/part-4-autonomy-protocols/09-tool-calling-mcp.md` for the full
+design writeup.
+
 ### Provider/model notes (apply to every combo above)
 
 - **Local (Ollama · qwen2.5:3b)**: fully offline, no API key, slower on

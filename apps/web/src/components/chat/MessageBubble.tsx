@@ -35,6 +35,21 @@ function GuardrailWarning({ guardrail }: { guardrail: NonNullable<ChatMessage["g
   );
 }
 
+/** Stage 9: renders a small trail of MCP tool calls the model made for this
+ * answer (e.g. "get_open_deals(company_name: Acme Fabrication)"), so tool
+ * usage is visible rather than hidden inside the model's reasoning. */
+function ToolsUsedTrail({ toolsUsed }: { toolsUsed: NonNullable<ChatMessage["toolsUsed"]> }) {
+  if (toolsUsed.length === 0) return null;
+  return (
+    <p className="usage-tag">
+      🔧 Tools used:{" "}
+      {toolsUsed
+        .map((call) => `${call.tool}(${Object.entries(call.arguments).map(([k, v]) => `${k}: ${v}`).join(", ")})`)
+        .join(", ")}
+    </p>
+  );
+}
+
 /** A single chat bubble: message text, optional provider tag, optional CRM facts panel, optional citations. */
 export function MessageBubble({ message }: { message: ChatMessage }) {
   return (
@@ -43,6 +58,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
       {message.role === "assistant" && message.provider && (
         <p className="provider-tag">via {message.provider === "cloud" ? "Cloud (OpenRouter)" : "Local (Ollama)"}</p>
       )}
+      {message.role === "assistant" && message.toolsUsed && <ToolsUsedTrail toolsUsed={message.toolsUsed} />}
       {message.role === "assistant" && message.usage && <UsageFootnote usage={message.usage} />}
       {message.role === "assistant" && message.guardrail && <GuardrailWarning guardrail={message.guardrail} />}
       {message.scopedCompany && <p className="provider-tag">Scoped to: {message.scopedCompany}</p>}

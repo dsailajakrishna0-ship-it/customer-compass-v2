@@ -37,6 +37,7 @@ export function ChatModeSelector({
           <option value="general">{MODE_COPY.general.label}</option>
           <option value="rag">{MODE_COPY.rag.label}</option>
           <option value="crm">{MODE_COPY.crm.label}</option>
+          <option value="tools">{MODE_COPY.tools.label}</option>
         </select>
       </div>
       <div className="provider-select">
