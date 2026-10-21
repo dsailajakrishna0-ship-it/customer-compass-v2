@@ -74,8 +74,9 @@ export type CrmFact = {
 
 export type LlmProvider = "ollama" | "cloud";
 
-/** "general" = Stage 2 plain chat, "rag" = Stage 3 document-grounded chat, "crm" = Stage 5 facts + citations. */
-export type ChatMode = "general" | "rag" | "crm";
+/** "general" = Stage 2 plain chat, "rag" = Stage 3 document-grounded chat, "crm" = Stage 5 facts + citations,
+ * "tools" = Stage 9 MCP tool-calling copilot. */
+export type ChatMode = "general" | "rag" | "crm" | "tools";
 
 /** Stage 7: per-request telemetry (which provider/model actually answered,
  * token counts, latency, a rough cost estimate, and whether automatic
@@ -110,10 +111,19 @@ export type ChatMessage = {
   provider?: LlmProvider;
   usage?: ChatUsage;
   guardrail?: ChatGuardrail;
+  toolsUsed?: ToolCallSummary[];
 };
 
 export type ModelOption = { id: string; name: string };
 export type ModelCatalog = { free: ModelOption[]; paid: ModelOption[] };
+
+/** Stage 9: one MCP tool call the model made during a /chat/tools turn
+ * (get_company_summary, get_open_deals, search_documents, or
+ * create_followup_task), shown as a small "tools used" trail. */
+export type ToolCallSummary = {
+  tool: string;
+  arguments: Record<string, unknown>;
+};
 
 export type IngestSummary = {
   documentsProcessed?: number;
@@ -131,4 +141,5 @@ export type ChatResponse = {
   provider?: LlmProvider;
   usage?: ChatUsage;
   guardrail?: ChatGuardrail;
+  toolsUsed?: ToolCallSummary[];
 };

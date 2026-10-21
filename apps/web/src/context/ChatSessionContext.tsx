@@ -41,6 +41,11 @@ export const MODE_COPY: Record<ChatMode, { label: string; placeholder: string; s
     placeholder: "Ask about deals, pipeline, or customer conversations…",
     switchNotice: "Switched to CRM copilot mode. I can pull verified facts from the database and cite ingested documents, clearly separated.",
   },
+  tools: {
+    label: "Tool-calling copilot (MCP)",
+    placeholder: "Ask me to look up deals, search documents, or propose a follow-up task…",
+    switchNotice: "Switched to tool-calling mode. I can call live tools (company summary, open deals, document search, follow-up tasks) via MCP instead of relying only on context stuffed into the prompt.",
+  },
 };
 
 type ChatSessionValue = {

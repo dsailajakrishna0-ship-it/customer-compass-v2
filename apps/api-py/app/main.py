@@ -23,6 +23,7 @@ from app.routes.chat import router as chat_router
 from app.routes.companies import router as companies_router
 from app.routes.documents import router as documents_router
 from app.routes.llm import router as llm_router
+from app.routes.tasks import router as tasks_router
 
 
 @asynccontextmanager
@@ -58,6 +59,7 @@ app.include_router(documents_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(llm_router, prefix="/api/v1")
 app.include_router(companies_router, prefix="/api/v1")
+app.include_router(tasks_router, prefix="/api/v1")
 
 
 @app.get("/health")

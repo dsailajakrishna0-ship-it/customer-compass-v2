@@ -15,6 +15,7 @@ const CHAT_ENDPOINTS: Record<ChatMode, string> = {
   general: "/api/v1/chat",
   rag: "/api/v1/chat/rag",
   crm: "/api/v1/chat/crm",
+  tools: "/api/v1/chat/tools",
 };
 
 /** Routes to the right additive endpoint ("/", "/rag", "/crm") for the active chat mode. */
