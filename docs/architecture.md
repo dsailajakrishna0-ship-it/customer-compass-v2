@@ -45,6 +45,27 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
                                           └─────────────────────┘
 ```
 
+## Stage-by-stage: what's new at each layer
+
+Same idea as the Stage 9 vs. Stage 10 comparison table, extended across
+every stage. **Bold** = introduced at that stage; everything else in a row
+is reused unchanged from an earlier stage. Read top to bottom to see the
+architecture diagram above build up incrementally. Full prose write-up per
+stage: [tech-stack.md](tech-stack.md).
+
+| Stage | New component(s) | New capability unlocked | Builds on |
+| --- | --- | --- | --- |
+| **1 — CRM Foundation** | **PostgreSQL** (companies, contacts, deals, interactions) | Structured CRM data exists at all; no LLM/AI yet | — |
+| **2 — First LLM Chat** | **Ollama** (local, `qwen2.5:3b`), `/api/v1/chat` | First chat/completion endpoint; no CRM data access yet | Stage 1 DB (unused by chat so far) |
+| **3 — Basic RAG** | **Ollama embeddings** (`mxbai-embed-large`), **`pgvector`** (same Postgres DB), `/api/v1/chat/rag` | Answers grounded in retrieved, cited document chunks instead of the model's own knowledge | Stage 1 DB, Stage 2 chat model |
+| **4 — Cloud LLM Provider** | **OpenRouter** (cloud, free tier), `GET /api/v1/llm/models`, Model/provider dropdowns in UI | Live, per-request choice between local and cloud inference — Ollama still works unchanged | Stage 2 chat plumbing |
+| **5 — Realistic CRM RAG** | **Query router** (`chat/router.py`), **`crm/queries.py`**, `/api/v1/chat/crm`, 3-way chat-mode selector | Questions routed to structured SQL facts, document retrieval, or both — and the UI visibly separates "verified facts" from "cited claims" | Stage 1 DB, Stage 3 retrieval |
+| **6 — Retrieval Evaluation** | **promptfoo** eval suite (`evals/`), LLM-as-judge rubric | Retrieval/grounding correctness and refusal behavior are now measurable, not just manually eyeballed — used to empirically tune `MIN_SIMILARITY` | Stage 3 retrieval, Stage 5 CRM routing |
+| **7 — Production Concerns** | **Cross-provider auto-fallback**, **per-request `usage` telemetry** | A failing provider no longer surfaces a hard error — it silently retries on the other provider and *tells you it did* (fallback flag + cost/latency footer in UI) | Stage 4 dual providers |
+| **8 — Prompt-Injection Guardrails** | **Rule-based input/document guard**, `<untrusted_context>` delimiting, `guardrail` field on every response | Injection attempts (direct or planted in a document) are neutralized in place and surfaced visibly, instead of silently succeeding or blocking the whole request | Stage 3 document ingestion, Stage 5 CRM chat, Stage 7 visibility pattern |
+| **9 — Tool Calling (MCP)** | **MCP server/client** (`app/mcp/`), fenced-text tool-call protocol, `/api/v1/chat/tools`, **`tasks`**/**`tool_audit_log`** tables | Model can call live tools **mid-conversation** (read CRM/docs, propose+confirm a mutating action) instead of everything being stuffed into the prompt upfront | Stage 1 DB, Stage 3 retrieval, Stage 5 CRM queries, Stage 8 guardrail (applied to tool results too) |
+| **10 — Agentic Assistant** | *(planned, not yet designed)* — likely a **planning loop**, **multi-step orchestration loop**, self-feedback/checking, broader approval surface | Model pursues a **multi-step goal** autonomously (e.g. "follow up with every stalled deal this week"), not just one reactive tool call per turn | Stage 9 tools, Stage 8 guardrails |
+
 ## Why two databases
 
 Postgres and Qdrant have different jobs and neither replaces the other here:
