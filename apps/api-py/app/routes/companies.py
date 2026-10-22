@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.db import get_pool
 
+# Plain SQL reads from Postgres - no AI involved, powers the company explorer UI
 router = APIRouter(prefix="/companies", tags=["companies"])
 
 

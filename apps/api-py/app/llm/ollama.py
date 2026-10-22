@@ -9,6 +9,7 @@ import httpx
 from app.llm.types import ChatMessage, GenerationResult
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11435")
+# Generating (chat) model: Ollama qwen2.5:3b runs locally to write the answer
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
 # Kept in sync with cloud.py's MAX_RESPONSE_TOKENS — same truncation issue
 # affects both providers for multi-citation RAG/CRM answers.

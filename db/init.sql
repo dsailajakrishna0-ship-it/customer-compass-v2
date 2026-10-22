@@ -1,3 +1,4 @@
+-- Postgres schema: relational CRM data (companies, contacts, deals, interactions) plus tasks and audit log
 CREATE TABLE companies (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,

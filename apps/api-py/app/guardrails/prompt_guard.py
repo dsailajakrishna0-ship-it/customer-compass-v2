@@ -26,6 +26,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+# Guardrail: rule-based scan that neutralizes prompt-injection phrases
 REDACTION_TAG = "[REDACTED: potential prompt injection removed by guardrail]"
 
 # Each entry targets one well-known injection phrasing style. Patterns are

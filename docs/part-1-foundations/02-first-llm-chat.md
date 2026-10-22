@@ -3,6 +3,13 @@
 **Part:** I — Foundations
 **Status:** Complete
 
+> **v2 stack note:** this record was written against the original Express API
+> (`apps/api`, port 3001, `/api/...`). In the current repo the API is FastAPI
+> (`apps/api-py`, port 8001, `/api/v1/...`; container `customer-compass-v2-ollama`, i.e. Ollama, which runs the local
+> *generating* model `qwen2.5:3b` that writes the chat answers).
+> See [../testing-guide.md](../testing-guide.md) for current run/test steps.
+> Paths, ports and curl examples below are kept as originally recorded.
+
 ## Goal
 
 Introduce an LLM and a simple conversational UI without granting it CRM data

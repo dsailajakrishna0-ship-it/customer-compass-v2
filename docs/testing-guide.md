@@ -12,7 +12,7 @@ clicking around and testing.
 ```bash
 cd /home/devarapallim/Murali/git-personal/customer-compass-v2
 
-# Backend stack: Postgres, Qdrant, Ollama, the FastAPI service
+# Backend stack: Postgres (CRM data), Qdrant (vector DB), Ollama (runs the local generating model), the FastAPI service (backend)
 docker compose up -d db qdrant ollama api-py
 
 # First time only (or after a DB/Ollama volume reset): pull the local model
@@ -67,8 +67,8 @@ volumes and reseed from scratch (e.g. after an `init.sql` change).
 The chat panel (`http://localhost:5173` → **Chat** nav link) has up to
 three controls:
 
-1. **Chat mode**: `General` / `Document knowledge (RAG)` / `CRM copilot`
-2. **Provider**: `Local (Ollama)` / `Cloud (OpenRouter)`
+1. **Chat mode**: `General` / `Document knowledge (RAG)` / `CRM copilot` / `Tool calling (MCP — a protocol that exposes tools to the model)`
+2. **Provider**: `Local (Ollama — runs the local qwen2.5:3b generating model)` / `Cloud (OpenRouter — hosted generating models)`
 3. **Model** (only shown when Provider = Cloud): any free OpenRouter model
    from the dropdown — paid models are listed but disabled/greyed out.
 
@@ -387,7 +387,7 @@ legitimate part), does not reveal its system prompt, and:
 | [api-reference.md](api-reference.md) | Every endpoint's exact request/response shape. |
 | [tech-stack.md](tech-stack.md) | Per-stage build history and the active technology per capability. |
 | [v2-startup-troubleshooting.md](v2-startup-troubleshooting.md) | Known local-startup quirks (container-name clashes, shared ports, env-file setup) and their fixes. |
-| [part-2-grounded-intelligence/06-retrieval-evaluation.md](part-2-grounded-intelligence/06-retrieval-evaluation.md) + [../evals/README.md](../evals/README.md) | The automated promptfoo eval suite, if you want to run these same kinds of checks without manual clicking. |
+| [part-2-grounded-intelligence/06-retrieval-evaluation.md](part-2-grounded-intelligence/06-retrieval-evaluation.md) + [../evals/README.md](../evals/README.md) | The automated promptfoo eval suite (a harness that sends test questions to the live API and grades the answers), if you want to run these same kinds of checks without manual clicking. |
 | [part-3-trust-safety/07-production-concerns.md](part-3-trust-safety/07-production-concerns.md) | Stage 7 fallback/telemetry design + its own manual test steps. |
 | [part-3-trust-safety/08-prompt-injection-guardrails.md](part-3-trust-safety/08-prompt-injection-guardrails.md) | Stage 8 guardrail design (threat model, neutralize-and-warn behavior) + indirect-injection manual test steps. |
 | [part-4-autonomy-protocols/09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md) | Stage 9 MCP tool-calling design (server/client, confirmation gate, hand-rolled tool-call protocol) + the real bug caught during manual testing. |

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Setup helper: reuses an existing Ollama model volume so the local models aren't re-downloaded
 # Detects whether the original `customer-compass` repo's Ollama model cache
 # already exists as a Docker volume on this machine. If it does, points this
 # repo's `ollama` service at that same volume (via OLLAMA_VOLUME_NAME in

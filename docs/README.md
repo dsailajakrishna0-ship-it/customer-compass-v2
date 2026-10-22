@@ -39,25 +39,36 @@ disrupting earlier ones.
 
 | Stage | Status | Document |
 | --- | --- | --- |
-| 9. Tool calling via MCP | Planned | [09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md) |
+| 9. Tool calling via MCP | Complete | [09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md) |
 | 10. Agentic CRM assistant | Planned | [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md) |
 
 ## Baseline stack
 
-- Frontend: React + Vite + TypeScript
-- Backend: FastAPI + Python (migrated from the original Express/TypeScript
+- Frontend: React + Vite + TypeScript (the browser chat UI)
+- Backend: FastAPI + Python (the API that routes chat requests, calls the models and queries the data; migrated from the original Express/TypeScript
   API during the v2 stack migration — see [architecture.md](architecture.md))
-- Relational data: PostgreSQL 17 in Docker
-- Vector storage: Qdrant in Docker (document chunk embeddings)
-- Local inference: Ollama + Qwen2.5 3B in Docker
-- Cloud inference (Stage 4+): OpenRouter, swappable via configuration or
+- Relational data: PostgreSQL 17 in Docker (the CRM tables; `pgvector` is not used in v2)
+- Vector storage: Qdrant in Docker (a vector database holding document chunk embeddings for similarity search)
+- Embeddings: Google `gemini-embedding-001` (768-dim, requires
+  `GOOGLE_API_KEY`; an embedding model that turns text into vectors — not a chat model)
+- Local inference: Ollama + Qwen2.5 3B in Docker (Ollama runs the local *generating* model that writes the chat answers; chat/completion only)
+- Tool calling (Stage 9): MCP (a protocol that exposes tools to the model) server over stdio (`apps/api-py/app/mcp/`)
+- Cloud inference (Stage 4+): OpenRouter (gateway to hosted cloud generating models), swappable via configuration or
   per-request
 
 This is an intentionally small, original CRM. It uses only synthetic data and
 does not reproduce an existing CRM product.
 
 See [conversation-progress.md](conversation-progress.md) for a concise running
-record of decisions, completed work, environment setup, and the next stage.
+record of the original (v1, Stages 1–3) decisions, and
+[project-history-reference.md](project-history-reference.md) for the
+narrative through Stage 9. [v3-roadmap-draft.md](v3-roadmap-draft.md) holds
+non-binding future planning notes.
+
+> **Historical-docs note:** the Stage 1–6 documents were written against the
+> original Express/TypeScript API (`apps/api`, port 3001, `/api/...`). The v2
+> stack serves FastAPI on port 8001 under `/api/v1/...` — each of those
+> documents carries a banner mapping old paths/commands to the current ones.
 
 See [tech-stack.md](tech-stack.md) for a cross-cutting reference of the
 active technology per capability (LLM inference, embeddings, vector storage,

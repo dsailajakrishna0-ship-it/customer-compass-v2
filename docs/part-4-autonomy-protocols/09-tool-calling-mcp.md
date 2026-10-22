@@ -30,7 +30,7 @@ process as Stage 7/8):
    the tool functions directly into the chat route in-process — a more
    realistic MCP deployment shape, and the point of learning the protocol at
    all.
-5. **Audit logging**: a dedicated `tool_audit_log` table, mirroring how
+5. **Audit logging**: a dedicated `tool_audit_log` table (records every tool call), mirroring how
    Stage 7 (usage) and Stage 8 (guardrail) telemetry each got a clear,
    queryable home.
 
@@ -49,7 +49,7 @@ expose tools to a model.
 What MCP does **not** standardize is how a given LLM *signals* that it wants
 to call a tool — that's each provider's own function-calling API, which is
 inconsistent or absent for the small free models this project targets
-(`qwen2.5:3b` locally, free-tier OpenRouter models). Rather than branch the
+(`qwen2.5:3b` locally via Ollama, free-tier OpenRouter hosted models). Rather than branch the
 code per provider, this stage uses a **hand-rolled, provider-agnostic text
 protocol**: the system prompt instructs the model to emit a fenced
 ` ```tool_call ` JSON block when it wants to invoke a tool; the chat route

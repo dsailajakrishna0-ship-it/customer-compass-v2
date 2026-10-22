@@ -3,7 +3,7 @@
 Base URL (local dev / Docker Compose): `http://localhost:8001`
 
 All endpoints except `/health` are prefixed `/api/v1`. The backend is
-FastAPI; interactive Swagger docs are also available live at
+FastAPI (the Python backend); interactive Swagger docs are also available live at
 `http://localhost:8001/docs` whenever the service is running.
 
 ## Conventions
@@ -23,7 +23,7 @@ FastAPI; interactive Swagger docs are also available live at
 
 ## `GET /health`
 
-Confirms the process is up **and** can reach Postgres (not just that the
+Confirms the process is up **and** can reach Postgres (the relational CRM database; not just that the
 process is alive).
 
 **Response 200**
@@ -93,7 +93,7 @@ tells the model it has no CRM access.
 | Field | Required | Notes |
 | --- | --- | --- |
 | `messages` | yes | 1–12 messages, `role` is `"user"` or `"assistant"`, `content` ≤ 4,000 chars and non-blank. |
-| `provider` | no | `"ollama"` or `"cloud"`. Defaults to `LLM_PROVIDER` env (default `"ollama"`). |
+| `provider` | no | `"ollama"` (local `qwen2.5:3b` via Ollama) or `"cloud"` (hosted model via OpenRouter). Defaults to `LLM_PROVIDER` env (default `"ollama"`). |
 | `model` | no | Only used when `provider` resolves to `"cloud"` (or a fallback lands on `"cloud"`) — an OpenRouter model id from `GET /api/v1/llm/models`. Ignored for `"ollama"`. |
 
 **Response 200**
@@ -110,8 +110,8 @@ tells the model it has no CRM access.
 
 ## `POST /api/v1/chat/rag`
 
-Retrieval-augmented chat: embeds the question, retrieves the nearest
-document chunks from Qdrant, and grounds the answer in them with required
+Retrieval-augmented chat: embeds the question (Google `gemini-embedding-001`, an embedding model that turns text into vectors), retrieves the nearest
+document chunks from Qdrant (the vector database), and grounds the answer in them with required
 `[n]` citations. Not company-scoped (general knowledge base).
 
 **Request body** — same shape as `/chat` above.
@@ -189,7 +189,7 @@ that part of the context. If neither facts nor documents matched anything,
 ## `POST /api/v1/chat/tools`
 
 Stage 9 tool-calling copilot: the model can call MCP tools
-(`get_company_summary`, `get_open_deals`, `search_documents`,
+(MCP is a protocol that exposes tools to the model: `get_company_summary`, `get_open_deals`, `search_documents`,
 `create_followup_task`) mid-conversation via a hand-rolled fenced
 ` ```tool_call ``` ` text protocol, instead of context being stuffed into
 the prompt upfront like `/chat/rag`/`/chat/crm`. Additive — never replaces
@@ -275,7 +275,7 @@ Most recent 10 ingestion runs, most recent first.
 
 Stage 9: lists follow-up tasks created by `create_followup_task` (only
 appears here once confirmed — a merely-proposed task is tracked only in
-`tool_audit_log`, below). Optional `?company_id=` filter.
+`tool_audit_log`, below — the table that records every MCP tool call). Optional `?company_id=` filter.
 
 ```json
 [{ "id": 3, "company_id": 2, "company_name": "Northstar Logistics", "note": "Send Q4 pricing sheet", "status": "open", "created_at": "2026-10-18 17:59:44.804461+00" }]
@@ -337,7 +337,7 @@ and a rough cost estimate.
 ## Guardrail object (Stage 8)
 
 Every successful `/chat*` response also includes a `guardrail` object —
-Stage 8's prompt-injection telemetry: whether the rule-based guard found
+Stage 8's prompt-injection telemetry: whether the rule-based prompt guard (a text scan for injection phrases) found
 and neutralized anything in the user's message and/or a retrieved document
 before it reached the LLM.
 

@@ -11,7 +11,7 @@ rate limiting. After discussing scope before building, we deliberately
 narrowed Stage 7 to the two concrete problems that actually came up during
 manual testing of earlier stages:
 
-1. **A cloud provider failure shouldn't be a dead end.** OpenRouter's free
+1. **A cloud provider failure shouldn't be a dead end.** OpenRouter's (gateway to hosted cloud models) free
    tier rate-limits/rotates models often; a single failed request used to
    surface a flat 503 with no recovery path.
 2. **We had no visibility into what each answer actually cost** in tokens,
@@ -29,7 +29,7 @@ production auth system.
 ## What was built
 
 1. **Automatic cross-provider fallback** (`app/llm/provider.py`). If the
-   requested provider (`cloud` or `ollama`) raises — timeout, rate-limit,
+   requested provider (`cloud` or `ollama` — the local model runner) raises — timeout, rate-limit,
    invalid model, provider outage — `generate()` retries once with the
    *other* provider before giving up. The response is flagged
    (`usage.fallbackUsed` / `usage.fallbackFrom`) so this is visible, not
@@ -61,7 +61,7 @@ production auth system.
 
 See the [API reference's Usage object section](../api-reference.md#usage-object-stage-7)
 for the exact response shape, and
-[architecture.md](../architecture.md#stage-7-provider-fallback--telemetry)
+[architecture.md](../architecture.md#request-flow-one-chat-question-start-to-finish-rag-mode-example)
 for how this fits into the overall request flow.
 
 ## How to run the app
@@ -138,15 +138,14 @@ operations, and has documented boundaries for features deliberately deferred.
 
 ### Expected files/modules (original plan, not built)
 
-- `apps/api/src/auth/` — identity extraction and authorization middleware.
-- `apps/api/src/security/` — prompt-input handling and PII/logging policy.
-- `apps/api/src/audit/` — audit-event model and writer.
-- `apps/api/src/observability/` — structured request/model/retrieval logging.
-- `apps/api/src/middleware/` — error responses and rate limiting.
+- `apps/api-py/app/auth/` — identity extraction and authorization middleware.
+- `apps/api-py/app/security/` — prompt-input handling and PII/logging policy.
+- `apps/api-py/app/audit/` — audit-event model and writer.
+- `apps/api-py/app/observability/` — structured request/model/retrieval logging.
+- `apps/api-py/app/middleware/` — error responses and rate limiting.
 - `db/migrations/...` — users/roles, document ACLs, and audit records as needed.
 - `docs/security-model.md` — explicitly documented permissions and deferred
   enterprise extensions.
 
-(Note: these paths reference the pre-migration `apps/api` Express service;
-the actual service is `apps/api-py` now — see
-[architecture.md](../architecture.md).)
+(Stage 9 later added a narrower `tool_audit_log` table (a Postgres table recording each MCP tool call) for MCP tool calls;
+see [09-tool-calling-mcp.md](../part-4-autonomy-protocols/09-tool-calling-mcp.md).)

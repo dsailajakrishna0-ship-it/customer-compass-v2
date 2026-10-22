@@ -19,6 +19,7 @@ class ToolSpec:
     input_schema: dict
 
 
+# MCP client: launches the tool server as a subprocess and talks to it over stdio
 def _server_params() -> StdioServerParameters:
     # Use sys.executable (the exact interpreter running this process, inside
     # the uv-managed venv) rather than a bare "python3" -- guarantees the

@@ -22,6 +22,7 @@ type ModelPickerProps = {
  * underlying platform cause.
  */
 export function ModelPicker({ id, cloudModel, onChangeCloudModel, cloudModels }: ModelPickerProps) {
+  // ModelPicker: lets the user choose which cloud (OpenRouter) generating model answers
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

@@ -1,5 +1,13 @@
 # Conversation and progress log
 
+> **Historical (v1, Stages 1–3 only).** This log was written for the original
+> Express/pgvector `customer-compass` repo and is no longer updated. Paths,
+> ports (`3001`), commands (`npm run dev` for the API) and tech choices below
+> describe that v1 stack. For the current v2 stack (FastAPI on `8001`, Qdrant,
+> Google embeddings, Stages 1–9) see [architecture.md](architecture.md),
+> [tech-stack.md](tech-stack.md) and
+> [project-history-reference.md](project-history-reference.md).
+
 This is a concise record of the decisions, implementation work, and verification
 completed with the project owner. It is not a verbatim transcript.
 
@@ -13,10 +21,10 @@ building a realistic application incrementally. It uses only synthetic CRM data.
 
 - Use VS Code as the primary IDE.
 - Use a modern AI-oriented learning stack: TypeScript, React/Vite, Express,
-  PostgreSQL, Docker Compose, Ollama, and a local Qwen2.5 3B model.
+  PostgreSQL, Docker Compose, Ollama (runs the local model), and a local Qwen2.5 3B model (the generating model that writes chat answers).
 - Keep Docker for infrastructure (PostgreSQL and Ollama); run UI and API locally
   for fast edit/reload cycles.
-- Work through eight stages, stopping after each verified stage.
+- Work through ten stages (originally eight), stopping after each verified stage.
 - Keep a developer-facing design record for every stage in `docs/`.
 
 ## Stage 1 completed — CRM foundation
@@ -119,7 +127,7 @@ curl -X POST http://localhost:3001/api/documents/ingest
   - **Part I — Foundations**: Stages 1–3 (unchanged, all complete).
   - **Part II — Grounded Intelligence**: Stage 4 (new — cloud LLM provider
     option), Stage 5 (was Stage 4 — realistic CRM RAG), Stage 6 (was Stage 5 —
-    retrieval evaluation, enriched with an LLM-as-judge scorer).
+    retrieval evaluation, enriched with an LLM-as-judge scorer — a second model that grades answers).
   - **Part III — Trust & Safety**: Stage 7 (was Stage 6 — production
     concerns), Stage 8 (new — prompt-injection defense & guardrails).
   - **Part IV — Autonomy & Protocols**: Stage 9 (was Stage 7 — tool calling,
@@ -131,11 +139,12 @@ curl -X POST http://localhost:3001/api/documents/ingest
 - New `docs/README.md` indexes stages by Part; old `docs/README.md` moved into
   the archive folder.
 
-## Next step
+## Next step (as of v1 — all later work is now done)
 
-Stage 4 (Part II): add a free-tier cloud LLM provider (Groq/OpenRouter/Gemini)
-as a swappable alternative to local Ollama, behind a shared provider
-abstraction, with no change to existing default (Ollama) behavior.
+Stages 4–9 were subsequently completed in v2 (cloud LLM provider, realistic
+CRM RAG, retrieval evaluation, production concerns, prompt-injection
+guardrails, MCP tool calling). The next unbuilt stage is Stage 10 (agentic
+assistant) — see [part-4-autonomy-protocols/10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md).
 
 ## Tech stack reference doc added
 
@@ -144,11 +153,10 @@ abstraction, with no change to existing default (Ollama) behavior.
   guardrails, evaluation) listing what's active, what swappable alternative
   is wired in or planned, and free options worth exploring. Update it
   alongside every stage that introduces a new technology choice.
-- `docker-compose.yml`: added a commented-out `qdrant` service (and matching
-  `qdrant-data` volume) as the first alternative-vector-store toggle — the
-  default remains `pgvector` on the existing `db` service. Uncomment +
-  `VECTOR_STORE=qdrant` to try it; comment out to revert, per
-  `docs/tech-stack.md`.
+- (v1 only) `docker-compose.yml` had a commented-out `qdrant` service as an
+  opt-in vector-store toggle. In v2 Qdrant is the active vector store and a
+  regular service in `docker-compose.yml`; the `VECTOR_STORE` toggle no
+  longer exists.
 
 ## Developer note
 

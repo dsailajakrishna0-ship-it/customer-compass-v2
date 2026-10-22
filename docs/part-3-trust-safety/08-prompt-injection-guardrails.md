@@ -6,7 +6,7 @@
 ## Goal
 
 Treat retrieved and user-supplied content as untrusted data, and add
-guardrails so the assistant cannot be hijacked by malicious instructions
+guardrails (a rule-based prompt guard that scans text for injection phrases) so the assistant cannot be hijacked by malicious instructions
 hidden inside CRM documents, support emails, or user messages — before
 Stage 9's tool calling grants it the ability to take real actions.
 
@@ -177,7 +177,7 @@ wanting to take this further:
 
 - An **adversarial test set** of known injection patterns as a versioned
   fixture (`evals/adversarial-prompts.json`), run repeatably via the
-  promptfoo eval suite (Stage 6) rather than only ad-hoc manual testing.
+  promptfoo (an eval harness that sends test questions to the live API and grades the answers) eval suite (Stage 6) rather than only ad-hoc manual testing.
 - An **output-side guardrail**, not just input/document-side: checking the
   model's *generated* answer for signs it leaked cross-customer data or
   complied with an embedded instruction, independent of whether the input

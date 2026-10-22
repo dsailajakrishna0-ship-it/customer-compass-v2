@@ -11,6 +11,7 @@ type SendChatRequest = {
   model?: string;
 };
 
+// One backend endpoint per chat mode: plain LLM, RAG over documents, CRM facts + docs, MCP tool calling
 const CHAT_ENDPOINTS: Record<ChatMode, string> = {
   general: "/api/v1/chat",
   rag: "/api/v1/chat/rag",

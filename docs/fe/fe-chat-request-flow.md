@@ -5,7 +5,8 @@ This document replaces the old Stage-2-only version
 `POST /api/chat` call straight out of a monolithic `main.tsx`. Since the
 [frontend refactor](./fe-architecture-overview.md) and later backend stages,
 the flow goes through dedicated hooks/context/api layers on the frontend and
-three chat endpoints on the backend. It now lives in `docs/fe/` because most
+four chat endpoints on the FastAPI backend (the Python API server) (`/api/v1/chat`, `/rag`, `/crm`,
+`/tools`). It now lives in `docs/fe/` because most
 of what changed is how the **frontend** builds and sends the request, not the
 model-calling logic itself.
 
@@ -17,12 +18,14 @@ model-calling logic itself.
 | Chat history, mode/provider/model state | `apps/web/src/context/ChatSessionContext.tsx` |
 | Building the request + calling the API | `apps/web/src/hooks/useChat.ts` |
 | Picking the right endpoint for the mode | `apps/web/src/api/chat.ts` |
-| Shared `fetch` wrapper | `apps/web/src/api/client.ts` |
-| Mounting the chat routes | `apps/api/src/app.ts` |
-| General / RAG / CRM route handlers | `apps/api/src/routes/chat.ts` |
-| Picking local (Ollama) vs. cloud (OpenRouter) | `apps/api/src/llm/provider.ts` |
-| Document retrieval for grounding | `apps/api/src/rag/retrieve.ts` |
-| Structured CRM facts + mode classification | `apps/api/src/crm/queries.ts`, `apps/api/src/chat/router.ts` |
+| Shared `fetch` wrapper (base URL `http://localhost:8001`) | `apps/web/src/api/client.ts` |
+| Mounting the routers under `/api/v1` | `apps/api-py/app/main.py` |
+| General / RAG / CRM / tools route handlers | `apps/api-py/app/routes/chat.py` |
+| Picking local (Ollama — runs the local generating model) vs. cloud (OpenRouter — hosted generating models) + fallback (one automatic retry on the other provider, Stage 7) | `apps/api-py/app/llm/provider.py` |
+| Document retrieval for grounding | `apps/api-py/app/rag/retrieve.py` |
+| Structured CRM facts + mode classification (the query router that decides DB facts vs. documents) | `apps/api-py/app/crm/queries.py`, `apps/api-py/app/chat/router.py` |
+| Prompt-injection scan (Stage 8; the prompt guard, a rule-based text scan) | `apps/api-py/app/guardrails/prompt_guard.py` |
+| MCP tool server/client (Stage 9; MCP is a protocol that exposes tools to the model) | `apps/api-py/app/mcp/` |
 
 ## Pictorial flow — frontend side
 
@@ -42,9 +45,10 @@ model-calling logic itself.
                               ┌────────────────────────┐
                               │  api/chat.ts             │
                               │  picks endpoint by mode: │
-                              │   general → /api/chat    │
-                              │   rag     → /api/chat/rag│
-                              │   crm     → /api/chat/crm│
+                              │   general → /api/v1/chat │
+                              │   rag     → /api/v1/chat/rag │
+                              │   crm     → /api/v1/chat/crm │
+                              │   tools   → /api/v1/chat/tools │
                               └─────────┬──────────────┘
                                          │ apiPost()
                                          ▼
@@ -53,11 +57,12 @@ model-calling logic itself.
                               │  (fetch + JSON wrapper)  │
                               └─────────┬──────────────┘
                                          ▼
-                                 Express API (see below)
+                                 FastAPI service (see below)
                                          │
                                          ▼
                          useChat() appends the ChatMessage
-                         (content, provider, citations, facts)
+                         (content, provider, citations, facts,
+                          usage, guardrail, toolsUsed)
                          to ChatSessionContext → MessageList
                          → MessageBubble re-renders
 ```
@@ -65,19 +70,21 @@ model-calling logic itself.
 ## Pictorial flow — backend side (per chat mode)
 
 ```text
-POST /api/chat            POST /api/chat/rag               POST /api/chat/crm
-     │                          │                                 │
-     ▼                          ▼                                 ▼
-validateMessages()        validateMessages()                validateMessages()
-     │                          │                                 │
-     │                    retrieveRelevantChunks()          classifyQuery(question)
-     │                          │                            ├─ wantsStructured? → getCompanySummary()
-     │                          │                            └─ wantsRag?        → retrieveRelevantChunks()
-     │                    buildContext(chunks)                     │
-     │                          │                            builds combined prompt
-     │                          │                            (facts block + cited sources block)
-     ▼                          ▼                                 ▼
-          generate(systemPrompt, messages, provider, model)
+POST /api/v1/chat   POST /api/v1/chat/rag     POST /api/v1/chat/crm      POST /api/v1/chat/tools
+     │                    │                         │                          │
+     ▼                    ▼                         ▼                          ▼
+ChatRequest model   ChatRequest model        ChatRequest model          ChatRequest model
+(pydantic: 1–12 msgs, ≤4,000 chars each)
+     │                    │                         │                          │
+scan_and_neutralize  scan_and_neutralize      scan_and_neutralize        scan_and_neutralize
+(user message)       (user msg + chunks)      (user msg + chunks)        (user msg + tool results)
+     │                    │                         │                          │
+     │             retrieve_relevant_chunks()  classify the question          loop (max 4 iterations):
+     │                    │                     ├─ structured? → CRM facts      model emits ```tool_call```
+     │             build_context(chunks)        └─ documents?  → retrieval      → MCP client → MCP server
+     │                    │                    builds combined prompt           (stdio subprocess)
+     ▼                    ▼                         ▼                          ▼
+          generate(system_prompt, messages, provider, model)
                     │
          ┌──────────┴───────────┐
          ▼                      ▼
@@ -86,7 +93,8 @@ validateMessages()        validateMessages()                validateMessages()
          │                      │
          └──────────┬───────────┘
                      ▼
-     { message, provider, citations?, facts?, scopedCompany? }
+     { message, provider, usage, guardrail,
+       citations?, facts?, scopedCompany?, toolsUsed? }
 ```
 
 ## 1. User submits a question
@@ -107,7 +115,10 @@ function askQuestion(event: FormEvent<HTMLFormElement>) {
   setQuestion("");
   setIsAsking(true);
 
-  const requestBody = { messages: history.slice(-12), provider };
+  const requestBody: { messages: ChatMessage[]; provider: LlmProvider; model?: string } = {
+    messages: history.slice(-12),
+    provider,
+  };
   if (provider === "cloud" && cloudModel) requestBody.model = cloudModel;
 
   sendChat(chatMode, requestBody)
@@ -118,6 +129,9 @@ function askQuestion(event: FormEvent<HTMLFormElement>) {
       facts: body.facts,
       scopedCompany: body.scopedCompany,
       provider: body.provider,
+      usage: body.usage,
+      guardrail: body.guardrail,
+      toolsUsed: body.toolsUsed,
     }]))
     .catch(() => setMessages((current) => [...current, {
       role: "assistant",
@@ -135,68 +149,75 @@ function askQuestion(event: FormEvent<HTMLFormElement>) {
 
 ```ts
 // apps/web/src/api/chat.ts
-export function sendChat(mode: ChatMode, body: ChatRequestBody) {
-  const path = mode === "rag" ? "/api/chat/rag" : mode === "crm" ? "/api/chat/crm" : "/api/chat";
-  return apiPost<ChatResponse>(path, body);
+const CHAT_ENDPOINTS: Record<ChatMode, string> = {
+  general: "/api/v1/chat",
+  rag: "/api/v1/chat/rag",
+  crm: "/api/v1/chat/crm",
+  tools: "/api/v1/chat/tools",
+};
+
+export function sendChat(mode: ChatMode, body: SendChatRequest) {
+  return apiPost<ChatResponse>(CHAT_ENDPOINTS[mode], body);
 }
 ```
 
-There are three modes, each hitting a different Express route:
+There are four modes, each hitting a different FastAPI route:
 
 | Mode | Endpoint | Behavior |
 | --- | --- | --- |
-| `general` | `POST /api/chat` | Plain LLM chat, no CRM/document grounding (original Stage 2 behavior) |
-| `rag` | `POST /api/chat/rag` | Retrieves cited document chunks and grounds the answer in them |
-| `crm` | `POST /api/chat/crm` | Classifies the question, pulls structured CRM facts and/or cited documents, and combines both in the prompt |
+| `general` | `POST /api/v1/chat` | Plain LLM chat, no CRM/document grounding (original Stage 2 behavior) |
+| `rag` | `POST /api/v1/chat/rag` | Retrieves cited document chunks and grounds the answer in them |
+| `crm` | `POST /api/v1/chat/crm` | Classifies the question, pulls structured CRM facts and/or cited documents, and combines both in the prompt |
+| `tools` | `POST /api/v1/chat/tools` | Stage 9: the model can call MCP tools (CRM summary, open deals, document search, propose a follow-up task) mid-conversation |
 
-## 3. Express validates and routes the request
+## 3. FastAPI validates and routes the request
 
-Every route shares the same guard before calling any model:
+Every route shares the same pydantic request model before calling any model
+(`ChatRequest` in `apps/api-py/app/routes/chat.py`): 1–12 messages, each with
+a `user`/`assistant` role and non-blank content of at most 4,000 characters.
+Invalid requests are rejected with a 4xx error before any LLM call. Each
+route then runs the Stage 8 prompt-injection scan on the user message (and on
+any retrieved/tool-returned content) before building the prompt.
 
-```ts
-function validateMessages(messages: unknown): messages is ChatMessage[] {
-  return (
-    Array.isArray(messages) &&
-    messages.length > 0 && messages.length <= 12 &&
-    messages.every((m) =>
-      (m?.role === "user" || m?.role === "assistant") &&
-      typeof m.content === "string" &&
-      m.content.trim().length > 0 && m.content.length <= 4_000)
-  );
-}
-```
-
-- **`/api/chat`** calls `generate(generalSystemPrompt, messages, provider, model)` directly.
-- **`/api/chat/rag`** calls `retrieveRelevantChunks(question)`, builds a numbered source context with `buildContext()`, and asks the model to cite `[1]`, `[2]`, etc.
-- **`/api/chat/crm`** calls `classifyQuery(question)` first to decide whether the question needs structured facts (`getCompanySummary()`), document retrieval, or both, then combines a "Verified CRM facts" block (never needs a citation) with a "Source documents" block (always needs one).
+- **`/api/v1/chat`** calls `generate(GENERAL_SYSTEM_PROMPT, messages, provider, model)` directly.
+- **`/api/v1/chat/rag`** calls `retrieve_relevant_chunks(question)`, builds a numbered source context with `build_context()`, and asks the model to cite `[1]`, `[2]`, etc. If nothing clears the similarity threshold it returns a canned "nothing relevant" answer without calling the LLM.
+- **`/api/v1/chat/crm`** classifies the question first (`app/chat/router.py`) to decide whether it needs structured facts (`app/crm/queries.py`), document retrieval, or both, then combines a "Verified CRM facts" block (never needs a citation) with a "Source documents" block (always needs one).
+- **`/api/v1/chat/tools`** runs a bounded loop (max 4 iterations) in which the model may emit a fenced `tool_call` block that is executed through the MCP client; mutating tools only run after the user confirms in their next message.
 
 ## 4. `generate()` picks the LLM provider
 
-```ts
-// apps/api/src/llm/provider.ts (conceptually)
-generate(systemPrompt, messages, provider, model)
-  // provider === "ollama" → calls http://localhost:11435 (qwen2.5:3b)
-  // provider === "cloud"  → calls OpenRouter with the user-picked free model
+```python
+# apps/api-py/app/llm/provider.py (conceptually)
+generate(system_prompt, messages, provider, model)
+  # provider == "ollama" -> Ollama (qwen2.5:3b)
+  # provider == "cloud"  -> OpenRouter with the user-picked free model
+  # on failure: retry once with the other provider, flag usage.fallbackUsed
 ```
 
 `provider` and `model` are optional per-request overrides sent from the UI's
-provider/model selectors; if omitted, the API falls back to
-`DEFAULT_LLM_PROVIDER`.
+provider/model selectors; if omitted, the API falls back to the
+`LLM_PROVIDER` environment variable (default `ollama`).
 
 ## 5. The response flows back up
 
-The API always responds with the same shape, with optional fields depending
+The API always responds with the same core shape, with optional fields depending
 on mode:
 
 ```json
 {
   "message": "…",
   "provider": "ollama",
+  "usage": { "…": "tokens, latency, cost, fallback flag (Stage 7)" },
+  "guardrail": { "flagged": false, "reasons": [] },
   "citations": [{ "number": 1, "title": "…", "similarity": 0.83 }],
   "facts": { "name": "Acme Fabrication", "openDeals": [] },
-  "scopedCompany": "Acme Fabrication"
+  "scopedCompany": "Acme Fabrication",
+  "toolsUsed": []
 }
 ```
+
+(`citations`/`facts`/`scopedCompany` appear in RAG/CRM modes, `toolsUsed` in
+tools mode. See [api-reference.md](../api-reference.md) for the exact shapes.)
 
 `useChat()` appends this as a new `ChatMessage` to `ChatSessionContext`,
 which re-renders `MessageList` → `MessageBubble`, conditionally showing

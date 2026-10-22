@@ -27,6 +27,7 @@ export function useChat(): {
       messages: history.slice(-12),
       provider,
     };
+    // Only cloud requests carry a model id; the local provider uses the server's Ollama model
     if (provider === "cloud" && cloudModel) requestBody.model = cloudModel;
 
     sendChat(chatMode, requestBody)

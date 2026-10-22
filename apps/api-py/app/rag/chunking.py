@@ -8,6 +8,7 @@ and dependency-free while learning the pipeline end to end.
 
 from dataclasses import dataclass
 
+# Chunking: documents are cut into ~600-char pieces (100 overlap) so each piece gets its own embedding
 CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
 

@@ -14,6 +14,7 @@ import httpx
 
 from app.llm.types import ChatMessage, GenerationResult
 
+# Enables cloud LLMs: OpenRouter is an OpenAI-compatible gateway to hosted models
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 # RAG/CRM answers often quote multiple cited chunks plus a summary; 350 was
 # cutting those off mid-sentence (observed during Stage 6 manual testing).

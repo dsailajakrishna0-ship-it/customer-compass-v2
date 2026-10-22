@@ -22,16 +22,11 @@ all of them.
 ## How swapping works
 
 Where an alternative is available, it is wired in as an **additive, opt-in
-toggle** — never a silent replacement (see `docs/conversation-progress.md` for
-this project's standing strategy). Two mechanisms are used:
+toggle** — never a silent replacement. Two mechanisms are used:
 
 1. **Environment variable** (application-level choice, e.g. which LLM
-   provider or vector store the API talks to).
-2. **Commented-out Docker Compose service** — the alternative's service
-   definition exists in `docker-compose.yml` but is commented out by default.
-   Uncomment it, set the matching environment variable, and restart to try it;
-   comment it back out to return to the default with no other changes.
-3. **Live UI selector, per request** (LLM provider and, for the cloud
+   provider the API talks to: `LLM_PROVIDER`, `OPENROUTER_MODEL`).
+2. **Live UI selector, per request** (LLM provider and, for the cloud
    provider, the specific model) — the web app lets the user pick the
    provider from a dropdown on every message, no restart needed; when
    "Cloud" is selected, a second dropdown lets them pick any currently
@@ -50,21 +45,23 @@ information, organized the other way (by technology, not by stage).
 
 ![Stage 1](https://img.shields.io/badge/Stage_1-CRM_Foundation-6f42c1) **— done**
 - **PostgreSQL 17** (Docker) — relational store for companies, contacts,
-  deals, interactions. No LLM/AI yet.
+  deals, interactions (the CRM data; `pgvector` is not used in v2). No LLM/AI yet.
 
 ![Stage 2](https://img.shields.io/badge/Stage_2-First_LLM_Chat-0969da) **— done**
-- **Ollama** (local, Docker) running **`qwen2.5:3b`** — the first chat/
+- **Ollama** (local, Docker; runs the local *generating* model that writes the chat answers) running **`qwen2.5:3b`** — the first chat/
   completion model, called from `/api/v1/chat`. No CRM data access yet.
 
 ![Stage 3](https://img.shields.io/badge/Stage_3-Basic_RAG-1a7f37) **— done**
 - **Ollama embeddings**, `mxbai-embed-large` (1024-dim) — turns ingested CRM
-  documents into vectors.
+  documents into vectors. *(Superseded in the v2 migration by Google
+  `gemini-embedding-001`, 768-dim — see the Embeddings section below.)*
 - **PostgreSQL + `pgvector`** — added to the *same* database as the CRM
   tables, storing and searching those embeddings. `/api/v1/chat/rag` grounds
-  answers in retrieved, cited chunks.
+  answers in retrieved, cited chunks. *(Superseded in the v2 migration by
+  Qdrant — see the Vector storage section below.)*
 
 ![Stage 4](https://img.shields.io/badge/Stage_4-Cloud_LLM_Provider-e36209) **— done**
-- **OpenRouter** (cloud, free tier) — a swappable alternative to Ollama for
+- **OpenRouter** (cloud, free tier; a gateway to hosted generating models) — a swappable alternative to Ollama for
   chat/completion, wired in additively (Ollama still works unchanged).
   Selectable **live, per request** from the web UI: a "Model" dropdown
   (Local Ollama / Cloud OpenRouter), and — when Cloud is picked — a second
@@ -74,20 +71,20 @@ information, organized the other way (by technology, not by stage).
 
 ![Stage 5](https://img.shields.io/badge/Stage_5-Realistic_CRM_RAG-d4a017) **— done**
 - **No new infra** — builds on the existing PostgreSQL tables and the Stage 3
-  `pgvector` retrieval. Adds a deterministic, keyword-based query router
+  vector retrieval. Adds a deterministic, keyword-based query router
   (`apps/api-py/app/chat/router.py`) that decides whether a question needs
   structured SQL facts (`apps/api-py/app/crm/queries.py`), document retrieval
-  (extended `retrieve.ts`, now customer-scoped by `company_id`), or both.
+  (`apps/api-py/app/rag/retrieve.py`, customer-scoped by `company_id`), or both.
   New additive `POST /api/v1/chat/crm` endpoint and a three-way "Chat mode"
   selector in the UI (General / RAG / CRM copilot) that visibly separates
   verified database facts from cited document claims.
 
 ![Stage 6](https://img.shields.io/badge/Stage_6-Retrieval_Evaluation-success) **— done**
-- **promptfoo**, testing the live `/api/v1/chat/rag` and `/api/v1/chat/crm`
+- **promptfoo** (an eval harness that sends test questions to the live API and grades the answers), testing the live `/api/v1/chat/rag` and `/api/v1/chat/crm`
   HTTP endpoints directly (`evals/promptfooconfig.yaml`). Combines
   deterministic checks (`icontains`/`javascript`, including a
-  company-scoping-isolation check) with LLM-as-judge (`llm-rubric`,
-  local `ollama:chat:qwen2.5:7b`) in the same test cases. Covers:
+  company-scoping-isolation check) with LLM-as-judge (a second model grades the answers; `llm-rubric`,
+  local `ollama:chat:qwen2.5:7b`, the judge model) in the same test cases. Covers:
   relevant-question grounding per company, out-of-corpus refusal (both a
   plausible-but-uncovered question and a completely unrelated one), and
   CRM structured-fact correctness.
@@ -109,7 +106,7 @@ information, organized the other way (by technology, not by stage).
   OpenRouter models, but the `cloud.py` pricing map is wired for real costs
   once paid models are enabled). Logged server-side (`llm_usage` log line)
   and shown in the UI as a small footer under each answer.
-- Found and fixed along the way: the FastAPI migration's error responses
+- Found and fixed along the way: the FastAPI migration's (FastAPI is the Python backend) error responses
   used `{"detail": ...}` while the frontend's contract (ported from the old
   Express API) read `{"error": ...}`, so real backend errors silently showed
   as a generic "Something went wrong." — added a global exception handler
@@ -161,11 +158,13 @@ information, organized the other way (by technology, not by stage).
   verified against a real bug where the model initially *claimed* success
   without a second tool call actually confirming it.
 - Every tool call (read and mutating) is recorded in a `tool_audit_log`
-  table, readable via `GET /api/v1/tool-audit-log`; confirmed tasks land in
+  table (it records every MCP tool call), readable via `GET /api/v1/tool-audit-log`; confirmed tasks land in
   a new `tasks` table, readable via `GET /api/v1/tasks`.
 
 ![Stage 10](https://img.shields.io/badge/Stage_10-Agentic_Assistant-lightgrey) **— planned**
-- Not yet designed.
+- Not yet built; see
+  [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md)
+  for the intended design.
 
 
 ## LLM inference (chat/completion)
@@ -196,13 +195,14 @@ Free options worth exploring later:
 
 | | Technology | Status |
 | --- | --- | --- |
-| **Active (default)** | Ollama, local, `mxbai-embed-large` (1024-dim) | Stage 3 |
+| **Active (default)** | Google `gemini-embedding-001` (768-dim, via `GOOGLE_API_KEY`; `GOOGLE_EMBEDDING_MODEL` overrides) | v2 migration |
+| **Previously (v1)** | Ollama, local, `mxbai-embed-large` (1024-dim) | Stage 3 |
 | **Swappable alternative** | Not yet planned | — |
 
 Free options worth exploring later:
 
+- **Ollama `mxbai-embed-large`** — the original local, no-API-key option.
 - **Cohere** — free-tier embed API, strong retrieval performance.
-- **Google `text-embedding-004`** — free-tier via Gemini API.
 - **Sentence-Transformers** (self-hosted, e.g. `all-MiniLM-L6-v2`) — fully
   free/local, smaller/faster than `mxbai-embed-large`, good for comparing
   embedding quality vs. speed trade-offs.
@@ -211,8 +211,12 @@ Free options worth exploring later:
 
 | | Technology | Status |
 | --- | --- | --- |
-| **Active (default)** | PostgreSQL + `pgvector` extension (same DB as CRM tables) | Stage 3 |
-| **Swappable alternative** | Qdrant (self-hosted, Docker), via `VECTOR_STORE=qdrant` | Planned |
+| **Active (default)** | Qdrant (self-hosted, Docker, collection `document_chunks`) | v2 migration |
+| **Previously (v1)** | PostgreSQL + `pgvector` extension (same DB as CRM tables) | Stage 3 |
+
+Postgres still runs from the `pgvector/pgvector:pg17` image and
+`db/002-rag.sql` still defines a `vector(1024)` column, but both are unused
+legacy in v2 — all vector search goes through Qdrant.
 
 `pgvector` is genuinely production-viable at this project's scale (see
 discussion in `docs/conversation-progress.md`) — this is not a "toy vs. real"
@@ -221,12 +225,11 @@ trade-off worth learning hands-on.
 
 Free options worth exploring later:
 
-- **Qdrant** — open-source, self-hosted via Docker, easy DX; the first
-  alternative wired into `docker-compose.yml` (see below).
+- **pgvector** — the v1 approach; simplest, no extra service.
 - **Chroma** — simplest to start with, embedded or server mode, common in RAG
   tutorials.
-- **Weaviate** — built-in hybrid (BM25 + vector) search, directly relevant to
-  Stage 6's hybrid-retrieval goal.
+- **Weaviate** — built-in hybrid (BM25 + vector) search, useful if hybrid
+  retrieval is ever added.
 - **Milvus / Zilliz Cloud** — industry-standard at large scale; free cloud
   tier available.
 - **pgvector + pgvectorscale** (Timescale extension) — adds StreamingDiskANN

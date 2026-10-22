@@ -4,6 +4,7 @@
 -- the same as 001-init.sql. Against an existing volume, apply it manually, e.g.
 --   docker exec -i customer-compass-db psql -U customer_compass -d customer_compass < db/002-rag.sql
 
+-- Legacy pgvector: live embeddings are in Qdrant now; document_chunks.embedding below is unused
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE documents (
