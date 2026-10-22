@@ -22,16 +22,11 @@ all of them.
 ## How swapping works
 
 Where an alternative is available, it is wired in as an **additive, opt-in
-toggle** — never a silent replacement (see `docs/conversation-progress.md` for
-this project's standing strategy). Two mechanisms are used:
+toggle** — never a silent replacement. Two mechanisms are used:
 
 1. **Environment variable** (application-level choice, e.g. which LLM
-   provider or vector store the API talks to).
-2. **Commented-out Docker Compose service** — the alternative's service
-   definition exists in `docker-compose.yml` but is commented out by default.
-   Uncomment it, set the matching environment variable, and restart to try it;
-   comment it back out to return to the default with no other changes.
-3. **Live UI selector, per request** (LLM provider and, for the cloud
+   provider the API talks to: `LLM_PROVIDER`, `OPENROUTER_MODEL`).
+2. **Live UI selector, per request** (LLM provider and, for the cloud
    provider, the specific model) — the web app lets the user pick the
    provider from a dropdown on every message, no restart needed; when
    "Cloud" is selected, a second dropdown lets them pick any currently
@@ -58,10 +53,12 @@ information, organized the other way (by technology, not by stage).
 
 ![Stage 3](https://img.shields.io/badge/Stage_3-Basic_RAG-1a7f37) **— done**
 - **Ollama embeddings**, `mxbai-embed-large` (1024-dim) — turns ingested CRM
-  documents into vectors.
+  documents into vectors. *(Superseded in the v2 migration by Google
+  `gemini-embedding-001`, 768-dim — see the Embeddings section below.)*
 - **PostgreSQL + `pgvector`** — added to the *same* database as the CRM
   tables, storing and searching those embeddings. `/api/v1/chat/rag` grounds
-  answers in retrieved, cited chunks.
+  answers in retrieved, cited chunks. *(Superseded in the v2 migration by
+  Qdrant — see the Vector storage section below.)*
 
 ![Stage 4](https://img.shields.io/badge/Stage_4-Cloud_LLM_Provider-e36209) **— done**
 - **OpenRouter** (cloud, free tier) — a swappable alternative to Ollama for
@@ -74,10 +71,10 @@ information, organized the other way (by technology, not by stage).
 
 ![Stage 5](https://img.shields.io/badge/Stage_5-Realistic_CRM_RAG-d4a017) **— done**
 - **No new infra** — builds on the existing PostgreSQL tables and the Stage 3
-  `pgvector` retrieval. Adds a deterministic, keyword-based query router
+  vector retrieval. Adds a deterministic, keyword-based query router
   (`apps/api-py/app/chat/router.py`) that decides whether a question needs
   structured SQL facts (`apps/api-py/app/crm/queries.py`), document retrieval
-  (extended `retrieve.ts`, now customer-scoped by `company_id`), or both.
+  (`apps/api-py/app/rag/retrieve.py`, customer-scoped by `company_id`), or both.
   New additive `POST /api/v1/chat/crm` endpoint and a three-way "Chat mode"
   selector in the UI (General / RAG / CRM copilot) that visibly separates
   verified database facts from cited document claims.
@@ -165,7 +162,9 @@ information, organized the other way (by technology, not by stage).
   a new `tasks` table, readable via `GET /api/v1/tasks`.
 
 ![Stage 10](https://img.shields.io/badge/Stage_10-Agentic_Assistant-lightgrey) **— planned**
-- Not yet designed.
+- Not yet built; see
+  [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md)
+  for the intended design.
 
 
 ## LLM inference (chat/completion)
@@ -196,13 +195,14 @@ Free options worth exploring later:
 
 | | Technology | Status |
 | --- | --- | --- |
-| **Active (default)** | Ollama, local, `mxbai-embed-large` (1024-dim) | Stage 3 |
+| **Active (default)** | Google `gemini-embedding-001` (768-dim, via `GOOGLE_API_KEY`; `GOOGLE_EMBEDDING_MODEL` overrides) | v2 migration |
+| **Previously (v1)** | Ollama, local, `mxbai-embed-large` (1024-dim) | Stage 3 |
 | **Swappable alternative** | Not yet planned | — |
 
 Free options worth exploring later:
 
+- **Ollama `mxbai-embed-large`** — the original local, no-API-key option.
 - **Cohere** — free-tier embed API, strong retrieval performance.
-- **Google `text-embedding-004`** — free-tier via Gemini API.
 - **Sentence-Transformers** (self-hosted, e.g. `all-MiniLM-L6-v2`) — fully
   free/local, smaller/faster than `mxbai-embed-large`, good for comparing
   embedding quality vs. speed trade-offs.
@@ -211,8 +211,12 @@ Free options worth exploring later:
 
 | | Technology | Status |
 | --- | --- | --- |
-| **Active (default)** | PostgreSQL + `pgvector` extension (same DB as CRM tables) | Stage 3 |
-| **Swappable alternative** | Qdrant (self-hosted, Docker), via `VECTOR_STORE=qdrant` | Planned |
+| **Active (default)** | Qdrant (self-hosted, Docker, collection `document_chunks`) | v2 migration |
+| **Previously (v1)** | PostgreSQL + `pgvector` extension (same DB as CRM tables) | Stage 3 |
+
+Postgres still runs from the `pgvector/pgvector:pg17` image and
+`db/002-rag.sql` still defines a `vector(1024)` column, but both are unused
+legacy in v2 — all vector search goes through Qdrant.
 
 `pgvector` is genuinely production-viable at this project's scale (see
 discussion in `docs/conversation-progress.md`) — this is not a "toy vs. real"
@@ -221,12 +225,11 @@ trade-off worth learning hands-on.
 
 Free options worth exploring later:
 
-- **Qdrant** — open-source, self-hosted via Docker, easy DX; the first
-  alternative wired into `docker-compose.yml` (see below).
+- **pgvector** — the v1 approach; simplest, no extra service.
 - **Chroma** — simplest to start with, embedded or server mode, common in RAG
   tutorials.
-- **Weaviate** — built-in hybrid (BM25 + vector) search, directly relevant to
-  Stage 6's hybrid-retrieval goal.
+- **Weaviate** — built-in hybrid (BM25 + vector) search, useful if hybrid
+  retrieval is ever added.
 - **Milvus / Zilliz Cloud** — industry-standard at large scale; free cloud
   tier available.
 - **pgvector + pgvectorscale** (Timescale extension) — adds StreamingDiskANN

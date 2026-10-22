@@ -67,7 +67,7 @@ volumes and reseed from scratch (e.g. after an `init.sql` change).
 The chat panel (`http://localhost:5173` → **Chat** nav link) has up to
 three controls:
 
-1. **Chat mode**: `General` / `Document knowledge (RAG)` / `CRM copilot`
+1. **Chat mode**: `General` / `Document knowledge (RAG)` / `CRM copilot` / `Tool calling (MCP)`
 2. **Provider**: `Local (Ollama)` / `Cloud (OpenRouter)`
 3. **Model** (only shown when Provider = Cloud): any free OpenRouter model
    from the dropdown — paid models are listed but disabled/greyed out.

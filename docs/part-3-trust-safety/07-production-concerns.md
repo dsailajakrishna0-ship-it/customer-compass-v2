@@ -61,7 +61,7 @@ production auth system.
 
 See the [API reference's Usage object section](../api-reference.md#usage-object-stage-7)
 for the exact response shape, and
-[architecture.md](../architecture.md#stage-7-provider-fallback--telemetry)
+[architecture.md](../architecture.md#request-flow-one-chat-question-start-to-finish-rag-mode-example)
 for how this fits into the overall request flow.
 
 ## How to run the app
@@ -138,15 +138,14 @@ operations, and has documented boundaries for features deliberately deferred.
 
 ### Expected files/modules (original plan, not built)
 
-- `apps/api/src/auth/` — identity extraction and authorization middleware.
-- `apps/api/src/security/` — prompt-input handling and PII/logging policy.
-- `apps/api/src/audit/` — audit-event model and writer.
-- `apps/api/src/observability/` — structured request/model/retrieval logging.
-- `apps/api/src/middleware/` — error responses and rate limiting.
+- `apps/api-py/app/auth/` — identity extraction and authorization middleware.
+- `apps/api-py/app/security/` — prompt-input handling and PII/logging policy.
+- `apps/api-py/app/audit/` — audit-event model and writer.
+- `apps/api-py/app/observability/` — structured request/model/retrieval logging.
+- `apps/api-py/app/middleware/` — error responses and rate limiting.
 - `db/migrations/...` — users/roles, document ACLs, and audit records as needed.
 - `docs/security-model.md` — explicitly documented permissions and deferred
   enterprise extensions.
 
-(Note: these paths reference the pre-migration `apps/api` Express service;
-the actual service is `apps/api-py` now — see
-[architecture.md](../architecture.md).)
+(Stage 9 later added a narrower `tool_audit_log` table for MCP tool calls;
+see [09-tool-calling-mcp.md](../part-4-autonomy-protocols/09-tool-calling-mcp.md).)

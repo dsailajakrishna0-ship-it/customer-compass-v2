@@ -3,6 +3,14 @@
 **Part:** I — Foundations
 **Status:** Completed
 
+> **v2 stack note:** this record describes the original v1 implementation
+> (Express API on port 3001, Ollama `mxbai-embed-large` embeddings, pgvector).
+> In v2 the API is FastAPI (`apps/api-py`, port 8001, `/api/v1/...`,
+> files `app/rag/*.py`), embeddings are Google `gemini-embedding-001`
+> (768-dim) and vectors live in Qdrant. See
+> [../architecture.md](../architecture.md) and [../tech-stack.md](../tech-stack.md).
+> Paths, ports, models and curl examples below are kept as originally recorded.
+
 ## Goal
 
 Build a transparent Retrieval-Augmented Generation pipeline using synthetic CRM

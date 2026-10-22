@@ -26,6 +26,7 @@ each mode, and example questions to try.
 | **General chat** | Plain LLM conversation, no CRM data at all | Quick sanity-check that the model itself is reachable; general knowledge questions unrelated to this CRM |
 | **Document knowledge (RAG)** | Answers are grounded only in ingested documents (emails, notes), with numbered citations | "What did we discuss with this customer?" type questions — anything that should be backed by a real document |
 | **CRM copilot (facts + documents)** | Combines live structured database facts (deals, pipeline) *and* cited documents, clearly separated | The most realistic "assistant" experience — ask about deals/status *and* conversation history in one question |
+| **Tool calling (MCP)** | The model calls live tools mid-conversation (company summary, open deals, document search) and can propose a follow-up task that you confirm in your next message | "Create a follow-up task for Acme" style requests; see [Stage 9](part-4-autonomy-protocols/09-tool-calling-mcp.md) |
 
 ### 3. Choose a Model
 
@@ -41,26 +42,14 @@ each mode, and example questions to try.
 There is **no separate company selector** in the UI — you simply name the
 company in your question text (e.g. "Acme Fabrication"), and the app scopes
 retrieval to that company automatically. Seeded companies: **Acme
-Fabrication**, **Northstar Logistics**, **Harbor & Pine**.
+Fabrication**, **Northstar Logistics**, **Harbor & Pine**, **Vertex
+Analytics**, **Golden Valley Foods**, **Summit Builders**, **Riverside
+Health Group**.
 
 ### 4. Example questions per mode
 
-**General chat** (should never mention CRM data):
-- *"Explain embeddings simply."*
-- *"What's the capital of France?"*
-
-**Document knowledge (RAG)** (expect numbered citations `[1]`, `[2]`…):
-- *"What did Acme Fabrication say about the volume discount?"*
-- *"What has Northstar Logistics discussed about onboarding?"*
-
-**CRM copilot** (expect facts and/or citations, clearly separated):
-- DB-only: *"What open deals does Acme Fabrication have?"* → facts only.
-- RAG-only: *"What did Acme Fabrication say about onboarding in their
-  emails?"* → citations only.
-- Combined: *"What's the status of Acme's renewal deal, and what have we
-  discussed with them recently?"* → both facts and citations, separated.
-- Scoping check: ask about one company and confirm citations never leak
-  another company's documents, even if phrasing is ambiguous.
+See [testing-guide.md](testing-guide.md) — it lists sample questions and
+expected results for every mode × provider combination.
 
 ## Issues seen so far
 

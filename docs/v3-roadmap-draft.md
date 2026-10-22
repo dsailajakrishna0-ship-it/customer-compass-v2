@@ -29,7 +29,8 @@ may touch the same code areas.
 Extends what the app can actually do for a user.
 
 - **add-new-company-ui** — UI form + `POST /api/companies` to create
-  companies/contacts/deals from the browser (currently seed-only).
+  companies/contacts/deals from the browser (currently seed-only). Would be
+  `POST /api/v1/companies` on the FastAPI service.
 - **multi-format-doc-ingestion** — PDF (`pypdf`/`pdfplumber`), Word
   (`python-docx`), Excel/CSV (`openpyxl`/`pandas`) support in the
   ingestion pipeline, alongside the current Markdown-only path.

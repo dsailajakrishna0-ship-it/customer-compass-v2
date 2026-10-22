@@ -1,85 +1,59 @@
 # Stage 6 — Retrieval quality and evaluation
 
 **Part:** II — Grounded Intelligence
-**Status:** Planned
+**Status:** Implemented
+
+The delivered suite is a **promptfoo** evaluation of the live `/api/v1/chat/rag`
+and `/api/v1/chat/crm` endpoints (deterministic checks plus an LLM-as-judge
+rubric). Full documentation, including how to run it and its known gaps, lives
+in [../../evals/README.md](../../evals/README.md); the config is
+[`evals/promptfooconfig.yaml`](../../evals/promptfooconfig.yaml).
 
 ## Goal
 
 Improve retrieval deliberately and measure it with a repeatable evaluation set
 rather than relying on a few successful chat examples.
 
-## Planned work
+## What was built
 
-- Build an approximately 30-question benchmark with expected source documents.
-- Add hybrid keyword + semantic retrieval where it improves results.
-- Evaluate reranking, query rewriting, and multi-query retrieval only when their
-  measured benefit justifies added complexity.
-- Record retrieval relevance/precision/recall, answer correctness, groundedness,
-  citation correctness, latency, and token consumption.
-- Add an **LLM-as-judge** scorer (e.g. via RAGAS, DeepEval, or a small custom
-  rubric prompt) to automatically rate groundedness and answer correctness
-  against expected sources, reducing reliance on manual eyeballing.
-- Compare local-model (Ollama) vs. cloud-model (Stage 4) retrieval-answer
-  quality and latency on the same benchmark.
+- A promptfoo test suite covering per-company grounding, company-scoping
+  isolation, out-of-corpus refusal, and CRM structured-fact correctness.
+- An LLM-as-judge rubric (`ollama:chat:qwen2.5:7b`) alongside deterministic
+  `icontains`/JavaScript assertions in the same test cases.
+- Empirical tuning of `MIN_SIMILARITY` in `apps/api-py/app/rag/retrieve.py`
+  (`0.3` → `0.45`), documented in the evals README.
 
-## Acceptance criteria
+## Not built (deferred)
 
-The repository contains an executable evaluation workflow and a baseline results
-report that makes regressions visible, including an LLM-judge score alongside
-deterministic retrieval metrics.
+- The ~30-question benchmark with expected source documents, retrieval
+  precision/recall metrics, and a baseline results report.
+- Hybrid keyword + semantic retrieval, reranking, query rewriting and
+  multi-query retrieval.
+- Local-vs-cloud provider comparison runs.
 
 ## How to run the app
 
 ```bash
-cd /home/devarapallim/Murali/git-personal/customer-compass
-docker compose up -d db ollama
-npm install
-npm run dev
+cd /home/devarapallim/Murali/git-personal/customer-compass-v2
+docker compose up -d db qdrant ollama api-py
+docker exec customer-compass-v2-ollama ollama pull qwen2.5:7b   # judge model, once
+curl -X POST http://localhost:8001/api/v1/documents/ingest      # once
 ```
-
-The evaluation workflow runs separately from the app (see below) and talks to
-the running API.
 
 ## How to test manually
 
-1. **Run the benchmark**
+1. **Run the suite**
    ```bash
-   npx tsx scripts/run-evals.ts
+   cd evals
+   OLLAMA_BASE_URL=http://localhost:11435 npx promptfoo@latest eval -j 1 -c promptfooconfig.yaml
    ```
-   Confirm it processes all ~30 questions against the running API without
-   crashing, and writes a timestamped result file under `evals/results/`.
-2. **Inspect the report**
-   ```bash
-   npx tsx scripts/report-evals.ts evals/results/<latest-file>.json
-   ```
-   Confirm the report shows retrieval precision/recall, groundedness, citation
-   correctness, latency, and an LLM-judge score per question.
-3. **Spot-check the LLM-judge score against your own judgment**
-   Pick 3–5 questions, read the retrieved sources and answer yourself, and
-   confirm your manual verdict (correct/incorrect, grounded/ungrounded)
-   roughly matches the automated judge score.
-4. **Regression check**
-   Intentionally break something small (e.g. lower the similarity threshold in
-   `retrieve.ts`), re-run the benchmark, and confirm the report visibly shows a
-   metric regression rather than silently passing.
-5. **Compare providers**
-   Re-run the benchmark once with `LLM_PROVIDER=ollama` and once with
-   `LLM_PROVIDER=cloud` (Stage 4) and compare the two reports side by side.
+2. **Inspect results**: `npx promptfoo@latest view`.
+3. **Regression check**: lower `MIN_SIMILARITY` in `retrieve.py`, rebuild
+   `api-py` (`docker compose up -d --build api-py`), re-run, and confirm the
+   out-of-corpus refusal tests start failing.
 
 ## Developer note
 
-Expected files/modules for this increment:
-
-- `evals/questions.json` — approximately 30 versioned test questions, expected
-  sources, and expected answer properties.
-- `apps/api/src/rag/hybrid-search.ts` and `rerank.ts` — retrieval improvements,
-  introduced only when evaluated.
-- `apps/api/src/eval/llm-judge.ts` — LLM-as-judge scoring adapter (groundedness,
-  correctness) usable with either configured LLM provider.
-- `scripts/run-evals.ts` — repeatable benchmark runner.
-- `scripts/report-evals.ts` — metrics aggregation and report generation.
-- `evals/results/` — timestamped, reviewable baseline outputs (excluding secrets).
-- `docs/evaluation-results.md` — interpretation of metrics and trade-offs.
-
-Do not replace the baseline retriever wholesale; preserve it as a comparison
-point for each proposed quality improvement.
+- `evals/promptfooconfig.yaml` — test cases and judge configuration.
+- `evals/README.md` — run instructions, tuning notes, known gaps.
+- `apps/api-py/app/rag/retrieve.py` — `MIN_SIMILARITY` tuned from evidence.
