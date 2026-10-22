@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.chat.router import classify_query
 from app.crm.queries import get_company_summary, list_companies
+from app.guardrails.audit import record_events
 from app.guardrails.prompt_guard import (
     GuardrailReport,
     add_findings,
@@ -149,10 +150,11 @@ def _usage_json(result: GenerationResult) -> dict:
 async def _finalize(
     endpoint: str, report: GuardrailReport, answer: str, scoped_company: str | None = None
 ) -> tuple[str, dict]:
-    """Stage 8.b: scans the model's answer (leaks, cross-customer
-    names), merges that into the report, and returns (safe answer, guardrail
-    telemetry for the frontend). Logged as a warning server-side, mirroring
-    Stage 7's fallback visibility."""
+    """Stage 8.b + 8.c: scans the model's answer (leaks, cross-customer
+    names), merges that into the report, writes every detection to the
+    security audit log, and returns (safe answer, guardrail telemetry for the
+    frontend). Logged as a warning server-side, mirroring Stage 7's fallback
+    visibility."""
     try:
         names = [company.name for company in await list_companies()] if scoped_company else []
     except Exception:  # noqa: BLE001 - output scan still runs without the name list
@@ -162,6 +164,7 @@ async def _finalize(
     guardrail = {"flagged": report.flagged, "reasons": report.reasons}
     if report.flagged:
         logger.warning("prompt_guard_flagged %s", guardrail)
+        await record_events(endpoint, report.events)
     return output_finding.neutralized_text, guardrail
 
 

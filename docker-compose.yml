@@ -69,6 +69,7 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}  # key for hosted cloud models via OpenRouter
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-liquid/lfm-2.5-2.6b:free}
+      SECURITY_AUDIT_RETENTION_DAYS: ${SECURITY_AUDIT_RETENTION_DAYS:-90}
     volumes:
       - ./sample-data:/sample-data:ro
     ports:

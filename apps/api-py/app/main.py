@@ -18,16 +18,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.db import close_pool, get_pool
+from app.guardrails.audit import ensure_schema_and_purge
 from app.rag.qdrant_store import close_client
 from app.routes.chat import router as chat_router
 from app.routes.companies import router as companies_router
 from app.routes.documents import router as documents_router
 from app.routes.llm import router as llm_router
+from app.routes.security import router as security_router
 from app.routes.tasks import router as tasks_router
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    await ensure_schema_and_purge()
     yield
     await close_pool()
     await close_client()
@@ -62,6 +65,7 @@ app.include_router(chat_router, prefix="/api/v1")
 app.include_router(llm_router, prefix="/api/v1")
 app.include_router(companies_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
+app.include_router(security_router, prefix="/api/v1")
 
 
 @app.get("/health")
