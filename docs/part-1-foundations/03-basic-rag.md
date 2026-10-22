@@ -71,6 +71,32 @@ separate vector database is needed; the embeddings live in a normal
 
 ## Vector indexing methods (concept + demo)
 
+### Exact vs approximate nearest neighbour (k-NN vs ANN)
+
+Retrieval asks: which stored vectors are nearest to the query? Computing the
+distance to **every** vector gives the exact answer (**k-NN**, "k nearest
+neighbours") but costs time proportional to the number of vectors times the
+dimensions (768 here). In high dimensions, tree-style exact indexes (like
+k-d trees) stop helping, so exact search does not scale past modest sizes.
+
+**ANN (approximate nearest neighbour)** search accepts "almost always the
+true top-k" in exchange for a large speed-up. The quality measure is
+**recall@k**: the share of the true top-k that the approximate search returns.
+Main ANN families:
+
+- **Graph-based:** HNSW (what Qdrant uses).
+- **Cluster-based:** IVF (inverted file).
+- **Hashing:** LSH (locality-sensitive hashing), which maps similar vectors to the same bucket.
+- **Compression-based:** product quantization (PQ), which stores compact codes and is often combined with IVF.
+
+Libraries and engines implement these, for example FAISS, ScaNN and Annoy,
+and vector databases such as Qdrant and pgvector wrap them. RAG usually
+tolerates a small recall loss, because the LLM only needs the relevant chunks
+to appear in the top few, not a perfect ranking. Only HNSW is measured in the
+demo below; the others are described only.
+
+### Index methods compared
+
 Finding the nearest vectors by comparing against every stored vector is
 **exact (flat) search**: always correct, but cost grows with the number of
 chunks. A vector database builds an **index** to avoid that, trading a little
@@ -110,7 +136,7 @@ compares the methods. One local run:
 Read these as the shape of the trade-off, not benchmarks: the data is
 synthetic and small, timings are noisy, and the gap grows with collection
 size. IVF was **not** measured here (Qdrant doesn't offer it); it is only
-described.
+described, as are LSH and PQ.
 
 ## Implemented design
 
