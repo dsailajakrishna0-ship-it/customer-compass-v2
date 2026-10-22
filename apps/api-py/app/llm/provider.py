@@ -22,6 +22,7 @@ from app.llm.cloud import generate_with_cloud
 from app.llm.ollama import generate_with_ollama
 from app.llm.types import ChatMessage, GenerationResult
 
+# "ollama" = local generating model, "cloud" = hosted model via OpenRouter
 LlmProvider = Literal["ollama", "cloud"]
 
 DEFAULT_LLM_PROVIDER: LlmProvider = os.environ.get("LLM_PROVIDER", "ollama")  # type: ignore[assignment]

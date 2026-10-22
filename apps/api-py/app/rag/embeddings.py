@@ -18,6 +18,7 @@ import os
 import httpx
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
+# Embedding model (Google gemini-embedding-001): turns text into 768-number vectors for similarity search
 EMBEDDING_MODEL = os.environ.get("GOOGLE_EMBEDDING_MODEL", "gemini-embedding-001")
 EMBEDDING_DIMENSIONS = 768
 

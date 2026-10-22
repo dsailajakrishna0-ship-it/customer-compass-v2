@@ -65,6 +65,7 @@ class CompanySummary:
     lost_deals_count: int
 
 
+# Structured CRM facts: exact SQL answers from Postgres, so the model doesn't have to guess numbers
 async def get_company_summary(company_id: int) -> CompanySummary | None:
     """Structured facts about one company: relationship status, open deals,
     and deal-outcome counts."""

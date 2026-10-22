@@ -1,4 +1,5 @@
 services:
+  # Postgres: relational CRM data (companies, deals, tasks, audit log); pgvector image, vector column unused
   db:
     image: pgvector/pgvector:pg17
     container_name: customer-compass-v2-db
@@ -36,6 +37,7 @@ services:
   # and the v2 migration plan). Standing this up here in PR 1; ingestion/
   # retrieval code is migrated to use it in later PRs. Postgres (above)
   # stays for structured/relational data (companies, CRM facts) only.
+  # Qdrant: vector DB that stores chunk embeddings and does nearest-neighbour search
   qdrant:
     image: qdrant/qdrant:latest
     container_name: customer-compass-v2-qdrant
@@ -52,6 +54,7 @@ services:
   # OLLAMA_URL points at the ollama service's internal Docker DNS name/port
   # (http://ollama:11434), since api-py reaches it over the compose network
   # rather than from the host (which used the host-mapped 11435 port).
+  # api-py: FastAPI backend tying together Postgres, Qdrant, Ollama, OpenRouter and Google embeddings
   api-py:
     build:
       context: ./apps/api-py
@@ -59,12 +62,12 @@ services:
     environment:
       DATABASE_URL: postgresql://customer_compass:customer_compass_dev@db:5432/customer_compass
       QDRANT_URL: http://qdrant:6333
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}  # Google embedding API key (gemini-embedding-001)
       SAMPLE_DATA_DIR: /sample-data/documents
       LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}  # key for hosted cloud models via OpenRouter
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-liquid/lfm-2.5-2.6b:free}
     volumes:
       - ./sample-data:/sample-data:ro

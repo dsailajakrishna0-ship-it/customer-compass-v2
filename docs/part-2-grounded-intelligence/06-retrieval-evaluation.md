@@ -3,9 +3,9 @@
 **Part:** II — Grounded Intelligence
 **Status:** Implemented
 
-The delivered suite is a **promptfoo** evaluation of the live `/api/v1/chat/rag`
+The delivered suite is a **promptfoo** evaluation (an eval harness that sends test questions to the live API and grades the answers) of the live `/api/v1/chat/rag`
 and `/api/v1/chat/crm` endpoints (deterministic checks plus an LLM-as-judge
-rubric). Full documentation, including how to run it and its known gaps, lives
+rubric, i.e. a second model that grades the answers). Full documentation, including how to run it and its known gaps, lives
 in [../../evals/README.md](../../evals/README.md); the config is
 [`evals/promptfooconfig.yaml`](../../evals/promptfooconfig.yaml).
 
@@ -18,7 +18,7 @@ rather than relying on a few successful chat examples.
 
 - A promptfoo test suite covering per-company grounding, company-scoping
   isolation, out-of-corpus refusal, and CRM structured-fact correctness.
-- An LLM-as-judge rubric (`ollama:chat:qwen2.5:7b`) alongside deterministic
+- An LLM-as-judge rubric (`ollama:chat:qwen2.5:7b`, the local judge model, bigger than the `qwen2.5:3b` generating model) alongside deterministic
   `icontains`/JavaScript assertions in the same test cases.
 - Empirical tuning of `MIN_SIMILARITY` in `apps/api-py/app/rag/retrieve.py`
   (`0.3` → `0.45`), documented in the evals README.

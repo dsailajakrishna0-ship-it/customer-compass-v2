@@ -14,6 +14,7 @@ DATABASE_URL = os.environ.get(
     "postgresql://customer_compass:customer_compass_dev@localhost:5432/customer_compass",
 )
 
+# Postgres (via asyncpg): holds relational CRM data (companies, deals, tasks), not embeddings
 _pool: asyncpg.Pool | None = None
 
 

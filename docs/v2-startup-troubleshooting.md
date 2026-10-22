@@ -1,7 +1,7 @@
 # v2 startup — known issues & lessons learned
 
 Notes from the first real local run of `customer-compass-v2`, right after the
-infra migration PR (Qdrant + Ollama cache reuse). Keep this updated as new
+infra migration PR (Qdrant, the vector DB + Ollama, the local model runner, cache reuse). Keep this updated as new
 startup quirks are found — especially while v1 (`customer-compass`) and v2
 coexist on the same machine.
 

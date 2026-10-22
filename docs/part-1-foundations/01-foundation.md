@@ -6,7 +6,7 @@
 > **v2 stack note:** this record was written against the original Express API
 > (`apps/api`, port 3001, `/api/...`, `npm run dev` starting the API). In the
 > current repo the API is FastAPI (`apps/api-py`, port 8001, `/api/v1/...`);
-> start it with `docker compose up -d db qdrant ollama api-py` and the web app
+> start it with `docker compose up -d db qdrant ollama api-py` (Postgres for CRM data, Qdrant vector DB, Ollama local model runner, the FastAPI backend) and the web app
 > with `cd apps/web && npm run dev`. See [../testing-guide.md](../testing-guide.md)
 > for current run/test steps. Paths, ports and curl examples below are kept as
 > originally recorded.

@@ -1,3 +1,4 @@
+# Eval harness: promptfoo sends test questions to the live API and grades answers (deterministic checks + LLM-as-judge)
 description: >
   Stage 6 retrieval evaluation for Customer Compass v2 (apps/api-py). Tests
   the live /api/v1/chat/rag and /api/v1/chat/crm endpoints against the
@@ -8,6 +9,7 @@ description: >
   ollama api-py` stack (see README.md in this directory for usage).
 
 providers:
+  # Providers here are our own live API endpoints (RAG and CRM modes), not model vendors
   - id: http://localhost:8001/api/v1/chat/rag
     label: rag
     config:
@@ -44,12 +46,14 @@ providers:
 
 defaultTest:
   options:
+    # Judge model: this local Ollama model grades answers for the llm-rubric assertions
     # Use a free Ollama model as judge too, so the whole eval suite runs
     # with zero cloud cost/API keys required — same local model the app
     # itself defaults to.
     provider: ollama:chat:qwen2.5:7b
 
 tests:
+  # Assertion types: icontains/icontains-any/javascript are deterministic checks; llm-rubric asks the judge model
   # --- RAG: grounded, answerable questions (one per company + one product-only doc) ---
   - description: "RAG finds Acme's discount/site-count request"
     providers: ["rag"]

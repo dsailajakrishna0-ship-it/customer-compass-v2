@@ -44,16 +44,16 @@ disrupting earlier ones.
 
 ## Baseline stack
 
-- Frontend: React + Vite + TypeScript
-- Backend: FastAPI + Python (migrated from the original Express/TypeScript
+- Frontend: React + Vite + TypeScript (the browser chat UI)
+- Backend: FastAPI + Python (the API that routes chat requests, calls the models and queries the data; migrated from the original Express/TypeScript
   API during the v2 stack migration — see [architecture.md](architecture.md))
-- Relational data: PostgreSQL 17 in Docker
-- Vector storage: Qdrant in Docker (document chunk embeddings)
+- Relational data: PostgreSQL 17 in Docker (the CRM tables; `pgvector` is not used in v2)
+- Vector storage: Qdrant in Docker (a vector database holding document chunk embeddings for similarity search)
 - Embeddings: Google `gemini-embedding-001` (768-dim, requires
-  `GOOGLE_API_KEY`)
-- Local inference: Ollama + Qwen2.5 3B in Docker (chat/completion only)
-- Tool calling (Stage 9): MCP server over stdio (`apps/api-py/app/mcp/`)
-- Cloud inference (Stage 4+): OpenRouter, swappable via configuration or
+  `GOOGLE_API_KEY`; an embedding model that turns text into vectors — not a chat model)
+- Local inference: Ollama + Qwen2.5 3B in Docker (Ollama runs the local *generating* model that writes the chat answers; chat/completion only)
+- Tool calling (Stage 9): MCP (a protocol that exposes tools to the model) server over stdio (`apps/api-py/app/mcp/`)
+- Cloud inference (Stage 4+): OpenRouter (gateway to hosted cloud generating models), swappable via configuration or
   per-request
 
 This is an intentionally small, original CRM. It uses only synthetic data and

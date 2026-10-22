@@ -5,7 +5,7 @@ This document replaces the old Stage-2-only version
 `POST /api/chat` call straight out of a monolithic `main.tsx`. Since the
 [frontend refactor](./fe-architecture-overview.md) and later backend stages,
 the flow goes through dedicated hooks/context/api layers on the frontend and
-four chat endpoints on the FastAPI backend (`/api/v1/chat`, `/rag`, `/crm`,
+four chat endpoints on the FastAPI backend (the Python API server) (`/api/v1/chat`, `/rag`, `/crm`,
 `/tools`). It now lives in `docs/fe/` because most
 of what changed is how the **frontend** builds and sends the request, not the
 model-calling logic itself.
@@ -21,11 +21,11 @@ model-calling logic itself.
 | Shared `fetch` wrapper (base URL `http://localhost:8001`) | `apps/web/src/api/client.ts` |
 | Mounting the routers under `/api/v1` | `apps/api-py/app/main.py` |
 | General / RAG / CRM / tools route handlers | `apps/api-py/app/routes/chat.py` |
-| Picking local (Ollama) vs. cloud (OpenRouter) + fallback | `apps/api-py/app/llm/provider.py` |
+| Picking local (Ollama — runs the local generating model) vs. cloud (OpenRouter — hosted generating models) + fallback (one automatic retry on the other provider, Stage 7) | `apps/api-py/app/llm/provider.py` |
 | Document retrieval for grounding | `apps/api-py/app/rag/retrieve.py` |
-| Structured CRM facts + mode classification | `apps/api-py/app/crm/queries.py`, `apps/api-py/app/chat/router.py` |
-| Prompt-injection scan (Stage 8) | `apps/api-py/app/guardrails/prompt_guard.py` |
-| MCP tool server/client (Stage 9) | `apps/api-py/app/mcp/` |
+| Structured CRM facts + mode classification (the query router that decides DB facts vs. documents) | `apps/api-py/app/crm/queries.py`, `apps/api-py/app/chat/router.py` |
+| Prompt-injection scan (Stage 8; the prompt guard, a rule-based text scan) | `apps/api-py/app/guardrails/prompt_guard.py` |
+| MCP tool server/client (Stage 9; MCP is a protocol that exposes tools to the model) | `apps/api-py/app/mcp/` |
 
 ## Pictorial flow — frontend side
 

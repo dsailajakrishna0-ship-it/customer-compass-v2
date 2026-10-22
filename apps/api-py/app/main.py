@@ -33,6 +33,7 @@ async def lifespan(_app: FastAPI):
     await close_client()
 
 
+# Backend: FastAPI is the Python web framework serving every /api/v1 route the React UI calls
 app = FastAPI(title="Customer Compass API (Python)", lifespan=lifespan)
 
 
@@ -48,6 +49,7 @@ async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONR
     frontend actually reads."""
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail, "detail": exc.detail})
 
+# CORS: lets the Vite dev UI (localhost:5173) call this API from the browser
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],

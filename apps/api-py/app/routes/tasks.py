@@ -35,6 +35,7 @@ async def list_tasks(company_id: int | None = None):
     return [dict(row) for row in rows]
 
 
+# Shows the audit trail of MCP tool calls recorded in Postgres
 @router.get("/tool-audit-log")
 async def list_tool_audit_log(limit: int = 50):
     pool = await get_pool()

@@ -9,6 +9,7 @@ from app.rag.qdrant_store import count_chunks
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
+# Ingestion: chunks sample docs, embeds them (Google) and stores vectors in Qdrant, metadata in Postgres
 @router.post("/ingest")
 async def ingest():
     """Runs the full parse -> chunk -> embed -> store pipeline over sample-data/documents."""

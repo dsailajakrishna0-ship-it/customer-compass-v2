@@ -11,7 +11,7 @@ rate limiting. After discussing scope before building, we deliberately
 narrowed Stage 7 to the two concrete problems that actually came up during
 manual testing of earlier stages:
 
-1. **A cloud provider failure shouldn't be a dead end.** OpenRouter's free
+1. **A cloud provider failure shouldn't be a dead end.** OpenRouter's (gateway to hosted cloud models) free
    tier rate-limits/rotates models often; a single failed request used to
    surface a flat 503 with no recovery path.
 2. **We had no visibility into what each answer actually cost** in tokens,
@@ -29,7 +29,7 @@ production auth system.
 ## What was built
 
 1. **Automatic cross-provider fallback** (`app/llm/provider.py`). If the
-   requested provider (`cloud` or `ollama`) raises — timeout, rate-limit,
+   requested provider (`cloud` or `ollama` — the local model runner) raises — timeout, rate-limit,
    invalid model, provider outage — `generate()` retries once with the
    *other* provider before giving up. The response is flagged
    (`usage.fallbackUsed` / `usage.fallbackFrom`) so this is visible, not
@@ -147,5 +147,5 @@ operations, and has documented boundaries for features deliberately deferred.
 - `docs/security-model.md` — explicitly documented permissions and deferred
   enterprise extensions.
 
-(Stage 9 later added a narrower `tool_audit_log` table for MCP tool calls;
+(Stage 9 later added a narrower `tool_audit_log` table (a Postgres table recording each MCP tool call) for MCP tool calls;
 see [09-tool-calling-mcp.md](../part-4-autonomy-protocols/09-tool-calling-mcp.md).)

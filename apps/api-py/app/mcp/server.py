@@ -17,6 +17,7 @@ from app.mcp.tools import (
     search_documents_tool,
 )
 
+# MCP server: exposes CRM tools to the model over stdio
 server = MCPServer(name="customer-compass-tools")
 
 

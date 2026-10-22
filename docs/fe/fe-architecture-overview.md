@@ -92,7 +92,7 @@ layer never imports React.
 2. `ChatInput` calls `askQuestion` from the `useChat()` hook — components never touch `fetch` directly.
 3. `useChat()` reads the current `chatMode` / `provider` / `cloudModel` from `useChatSession()` (the context) and calls `sendChat()` in `api/chat.ts`.
 4. `api/chat.ts` picks the right endpoint — `/api/v1/chat`, `/api/v1/chat/rag`, `/api/v1/chat/crm`, or `/api/v1/chat/tools` — based on `chatMode`, and posts via the shared `apiPost` helper in `api/client.ts`.
-5. The FastAPI service resolves the request (plain LLM call, RAG retrieval + citations, CRM facts + RAG, or MCP tool calling), and returns a `ChatResponse`.
+5. The FastAPI service (the Python backend) resolves the request (plain LLM call, RAG retrieval + citations, CRM facts + RAG, or MCP tool calling), and returns a `ChatResponse`.
 6. `useChat()` appends the new `ChatMessage` (with `provider`, `citations`, `facts` as applicable) to context state.
 7. `ChatSessionContext` persists `chatMode`/`provider`/`cloudModel` to `localStorage` on change, and the `messages` list re-renders through `MessageList` → `MessageBubble` → `CrmFactsPanel` / `CitationList`.
 

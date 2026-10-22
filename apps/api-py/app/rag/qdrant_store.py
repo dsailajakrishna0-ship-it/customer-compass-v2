@@ -18,6 +18,7 @@ from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, P
 
 from app.rag.embeddings import EMBEDDING_DIMENSIONS
 
+# Vector DB: Qdrant stores chunk embeddings and does nearest-neighbour search
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 COLLECTION_NAME = os.environ.get("QDRANT_COLLECTION", "document_chunks")
 
@@ -47,6 +48,7 @@ async def recreate_collection() -> None:
         await client.delete_collection(COLLECTION_NAME)
     await client.create_collection(
         collection_name=COLLECTION_NAME,
+        # Cosine distance: compares vector direction, so similar meaning scores close to 1
         vectors_config=VectorParams(size=EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
     )
 

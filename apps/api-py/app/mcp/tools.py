@@ -24,6 +24,7 @@ async def _resolve_company(company_name: str) -> CompanyRef | None:
     return find_mentioned_company(company_name, companies)
 
 
+# Audit trail: every tool call is written to the tool_audit_log Postgres table
 async def _log_tool_call(
     tool_name: str,
     arguments: dict,

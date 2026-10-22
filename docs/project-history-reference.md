@@ -25,7 +25,7 @@ Sourced from three sessions:
   the mechanics of RAG/LLM-app-building rather than lean on LangChain/etc.
   from day one.
 - Originally: Node/Express API (`apps/api`), Postgres **with pgvector**
-  for both relational CRM data and embeddings, Ollama for local LLM +
+  for both relational CRM data and embeddings (pgvector is a Postgres vector-search extension, unused in v2), Ollama for local LLM +
   embeddings, React frontend (`apps/web`).
 - GitHub account for this repo: **`dsailajakrishna0-ship-it`** (not the
   default `devarapalli-ojas` account active in this environment — `gh`
@@ -42,7 +42,7 @@ Sourced from three sessions:
 | 3 | Basic RAG: pgvector-backed ingest/retrieve pipeline, 8 synthetic docs, `/api/chat/rag`, citations in UI | done, old repo, PR #2 |
 | 4 (v1 numbering) | Realistic CRM RAG: DB-facts vs RAG-vs-both question routing, company-scoped retrieval. **Renumbered:** in the current Part-based docs this is Stage 5; Stage 4 is now the cloud LLM provider (OpenRouter) | done |
 | **Migration** | Full **v2 rewrite**: repo renamed `customer-compass` → `customer-compass-v2`, backend rewritten **Express → FastAPI/Python** (`apps/api-py`), vector store moved **pgvector → Qdrant** and embeddings moved **Ollama `mxbai-embed-large` → Google `gemini-embedding-001`** (Postgres's `vector(1024)` column still exists in `db/002-rag.sql` but is now dead/unused legacy schema), added **cloud LLM provider (OpenRouter)** alongside local Ollama, frontend refactored into proper layers (types/api/hooks/context/components/pages+routing — see `web-refactor-01..04` todos, all done) | done |
-| 6 | Retrieval evaluation (promptfoo eval suite — `evals/README.md`, `docs/part-2.../06-retrieval-evaluation.md`) | done, PR #6 |
+| 6 | Retrieval evaluation (promptfoo eval suite (a harness that sends test questions to the live API and grades the answers — `evals/README.md`, `docs/part-2.../06-retrieval-evaluation.md`) | done, PR #6 |
 | 6.1 | Bug-fix follow-up: response-truncation fix (`MAX_RESPONSE_TOKENS=700`), model-dropdown-closes-unexpectedly fix (`ModelPicker.tsx`), error-field contract mismatch fix (`error`/`detail` dual-key) | done, PR #7, merged |
 | 7 | **Production concerns**: automatic one-shot cross-provider LLM fallback (cloud↔ollama) + full per-request telemetry (tokens/latency/provider-model/estimated cost) shown in logs + UI usage footer. Scope was explicitly discussed/narrowed via `ask_user` — the original Stage 7 placeholder (auth, audit logging, rate limiting) was deferred, not built; see "Deferred" section in `docs/part-3-trust-safety/07-production-concerns.md` | **PR #8, merged** |
 | 8 | **Prompt-injection guardrails**: rule-based scan of user messages and retrieved chunks (neutralize-in-place), `<untrusted_context>` delimiting, `guardrail` field on every chat response — see `docs/part-3-trust-safety/08-prompt-injection-guardrails.md` | PR #9, merged |

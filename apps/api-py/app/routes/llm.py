@@ -23,6 +23,7 @@ CACHE_TTL_SECONDS = 5 * 60
 _cache: dict | None = None
 
 
+# Feeds the UI model picker with OpenRouter's catalogue of hosted models (cached 5 min)
 @router.get("/models")
 async def list_models():
     global _cache

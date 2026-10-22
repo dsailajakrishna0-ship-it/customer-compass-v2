@@ -1,7 +1,7 @@
 # Retrieval Evaluation (Stage 6)
 
 Evaluates the live `apps/api-py` RAG/CRM chat endpoints against the
-`sample-data/documents` corpus, using [promptfoo](https://www.promptfoo.dev/).
+`sample-data/documents` corpus, using [promptfoo](https://www.promptfoo.dev/) — an eval harness that sends test questions to the live API and grades the answers.
 
 ## What this tests
 
@@ -18,14 +18,14 @@ Evaluates the live `apps/api-py` RAG/CRM chat endpoints against the
   company/deal and scope correctly?
 
 Each test uses **both** a deterministic check (keyword match / JS assertion
-on the structured response) and an **LLM-as-judge** rubric for the more
+on the structured response) and an **LLM-as-judge** rubric (a second model, `qwen2.5:7b`, that grades each answer) for the more
 nuanced "did the answer actually make sense" grading.
 
 ## MIN_SIMILARITY tuning (PR 4 follow-up)
 
 PR 4 flagged that `MIN_SIMILARITY=0.3` (inherited unchanged from the old
 pgvector/mxbai-embed-large pipeline) didn't filter unrelated questions well
-with the new `gemini-embedding-001` embeddings. Sampling real similarity
+with the new `gemini-embedding-001` embeddings (Google's text → vector embedding model, not a chat model). Sampling real similarity
 scores against the live corpus showed a clear gap:
 
 | Question type | Similarity range |
@@ -46,7 +46,7 @@ checks for instead of expecting zero citations in that case.
 
 ## Running
 
-Requires the full stack up (`docker compose up -d db qdrant ollama api-py`
+Requires the full stack up (`docker compose up -d db qdrant ollama api-py` — Postgres, Qdrant vector DB, Ollama local model runner, FastAPI backend;
 from the repo root) with sample data already ingested
 (`curl -X POST http://localhost:8001/api/v1/documents/ingest`, see the root
 README if you haven't run this before).

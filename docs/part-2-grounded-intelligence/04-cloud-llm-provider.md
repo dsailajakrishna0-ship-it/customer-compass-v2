@@ -11,7 +11,7 @@
 
 ## Goal
 
-Add one free-tier cloud LLM provider as a swappable alternative to local Ollama,
+Add one free-tier cloud LLM provider as a swappable alternative to local Ollama (the runner of the local generating model),
 without replacing it. This turns the "future cloud-model providers" boundary
 noted since Stage 2 into a real, working option, and gives later stages
 (evaluation, production fallback) a second real provider to compare against
@@ -29,7 +29,7 @@ instead of a hypothetical one.
 
 ## Chosen provider (free tier)
 
-**OpenRouter** — OpenAI-compatible `/chat/completions` API with a rotating
+**OpenRouter** (a gateway that gives access to hosted cloud generating models) — OpenAI-compatible `/chat/completions` API with a rotating
 catalog of `:free`-suffixed models. Chosen over Groq/Gemini for this stage
 because its request/response shape matches Ollama's closely enough that one
 thin adapter (`cloud.ts`) covers it, and its free-tier model list is fetchable

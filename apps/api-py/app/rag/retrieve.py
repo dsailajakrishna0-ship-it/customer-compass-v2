@@ -14,6 +14,7 @@ from qdrant_client.models import FieldCondition, Filter, IsNullCondition, MatchV
 from app.rag.embeddings import embed_text
 from app.rag.qdrant_store import COLLECTION_NAME, get_client
 
+# Retrieval: embed the question, then ask Qdrant for the top-k most similar chunks
 DEFAULT_TOP_K = 4
 # Chunks below this cosine similarity are treated as not relevant enough to cite.
 #

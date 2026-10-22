@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from app.crm.queries import CompanyRef, list_companies
 
+# Router keywords: deal/pipeline words send the question to SQL CRM facts instead of document search
 STRUCTURED_KEYWORDS = [
     "deal",
     "deals",
@@ -31,6 +32,7 @@ STRUCTURED_KEYWORDS = [
     "relationship status",
 ]
 
+# Router keywords: "said/email/call" style words send the question to RAG document search
 RAG_KEYWORDS = [
     "said",
     "say",

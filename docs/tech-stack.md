@@ -45,10 +45,10 @@ information, organized the other way (by technology, not by stage).
 
 ![Stage 1](https://img.shields.io/badge/Stage_1-CRM_Foundation-6f42c1) **— done**
 - **PostgreSQL 17** (Docker) — relational store for companies, contacts,
-  deals, interactions. No LLM/AI yet.
+  deals, interactions (the CRM data; `pgvector` is not used in v2). No LLM/AI yet.
 
 ![Stage 2](https://img.shields.io/badge/Stage_2-First_LLM_Chat-0969da) **— done**
-- **Ollama** (local, Docker) running **`qwen2.5:3b`** — the first chat/
+- **Ollama** (local, Docker; runs the local *generating* model that writes the chat answers) running **`qwen2.5:3b`** — the first chat/
   completion model, called from `/api/v1/chat`. No CRM data access yet.
 
 ![Stage 3](https://img.shields.io/badge/Stage_3-Basic_RAG-1a7f37) **— done**
@@ -61,7 +61,7 @@ information, organized the other way (by technology, not by stage).
   Qdrant — see the Vector storage section below.)*
 
 ![Stage 4](https://img.shields.io/badge/Stage_4-Cloud_LLM_Provider-e36209) **— done**
-- **OpenRouter** (cloud, free tier) — a swappable alternative to Ollama for
+- **OpenRouter** (cloud, free tier; a gateway to hosted generating models) — a swappable alternative to Ollama for
   chat/completion, wired in additively (Ollama still works unchanged).
   Selectable **live, per request** from the web UI: a "Model" dropdown
   (Local Ollama / Cloud OpenRouter), and — when Cloud is picked — a second
@@ -80,11 +80,11 @@ information, organized the other way (by technology, not by stage).
   verified database facts from cited document claims.
 
 ![Stage 6](https://img.shields.io/badge/Stage_6-Retrieval_Evaluation-success) **— done**
-- **promptfoo**, testing the live `/api/v1/chat/rag` and `/api/v1/chat/crm`
+- **promptfoo** (an eval harness that sends test questions to the live API and grades the answers), testing the live `/api/v1/chat/rag` and `/api/v1/chat/crm`
   HTTP endpoints directly (`evals/promptfooconfig.yaml`). Combines
   deterministic checks (`icontains`/`javascript`, including a
-  company-scoping-isolation check) with LLM-as-judge (`llm-rubric`,
-  local `ollama:chat:qwen2.5:7b`) in the same test cases. Covers:
+  company-scoping-isolation check) with LLM-as-judge (a second model grades the answers; `llm-rubric`,
+  local `ollama:chat:qwen2.5:7b`, the judge model) in the same test cases. Covers:
   relevant-question grounding per company, out-of-corpus refusal (both a
   plausible-but-uncovered question and a completely unrelated one), and
   CRM structured-fact correctness.
@@ -106,7 +106,7 @@ information, organized the other way (by technology, not by stage).
   OpenRouter models, but the `cloud.py` pricing map is wired for real costs
   once paid models are enabled). Logged server-side (`llm_usage` log line)
   and shown in the UI as a small footer under each answer.
-- Found and fixed along the way: the FastAPI migration's error responses
+- Found and fixed along the way: the FastAPI migration's (FastAPI is the Python backend) error responses
   used `{"detail": ...}` while the frontend's contract (ported from the old
   Express API) read `{"error": ...}`, so real backend errors silently showed
   as a generic "Something went wrong." — added a global exception handler
@@ -158,7 +158,7 @@ information, organized the other way (by technology, not by stage).
   verified against a real bug where the model initially *claimed* success
   without a second tool call actually confirming it.
 - Every tool call (read and mutating) is recorded in a `tool_audit_log`
-  table, readable via `GET /api/v1/tool-audit-log`; confirmed tasks land in
+  table (it records every MCP tool call), readable via `GET /api/v1/tool-audit-log`; confirmed tasks land in
   a new `tasks` table, readable via `GET /api/v1/tasks`.
 
 ![Stage 10](https://img.shields.io/badge/Stage_10-Agentic_Assistant-lightgrey) **— planned**

@@ -59,6 +59,7 @@ type ChatSessionValue = {
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 };
 
+// Context: shares the chat mode, model provider (local Ollama vs cloud) and history across pages
 const ChatSessionContext = createContext<ChatSessionValue | null>(null);
 
 const INITIAL_MESSAGE: ChatMessage = {

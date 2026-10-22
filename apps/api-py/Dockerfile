@@ -1,3 +1,4 @@
+# Image: slim Python 3.12 base; uv installs deps, uvicorn serves the FastAPI app on port 8001
 FROM python:3.12-slim
 
 # Install uv (fast Python package manager) — see

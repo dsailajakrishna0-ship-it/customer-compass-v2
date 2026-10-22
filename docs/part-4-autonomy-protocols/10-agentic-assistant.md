@@ -66,7 +66,7 @@ Expected files/modules for this increment:
   strict time/tool limits.
 - `apps/api-py/app/agent/trace.py` — inspectable evidence and tool execution trace.
 - `apps/api-py/app/agent/policies.py` — confirmation and stop conditions.
-- `apps/api-py/app/mcp/` — the existing Stage 9 MCP tools; no parallel action mechanism.
+- `apps/api-py/app/mcp/` — the existing Stage 9 MCP tools (MCP: a protocol that exposes tools to the model); no parallel action mechanism.
 - `apps/web/src/...` — workflow status, evidence, recommendation, and
   confirmation experience.
 - `docs/agent-boundaries.md` — decision table for direct RAG, tools,

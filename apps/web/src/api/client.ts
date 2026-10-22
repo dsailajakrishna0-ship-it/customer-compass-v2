@@ -9,6 +9,7 @@
  * the same way the previous inline fetch calls did.
  */
 
+// API layer: every request goes to the FastAPI backend (api-py) on port 8001
 export const API_BASE_URL = "http://localhost:8001";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

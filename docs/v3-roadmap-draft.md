@@ -45,8 +45,9 @@ Reimplements existing hand-rolled pieces using well-known frameworks,
 purely to compare control/transparency vs. speed/ecosystem — not to
 replace the hand-rolled version permanently.
 
-- **LangChain core** — `OllamaEmbeddings`/`GoogleGenerativeAIEmbeddings`
-  + `QdrantVectorStore` + `retriever.invoke()` vs. our
+- **LangChain core** — `OllamaEmbeddings` (Ollama runs local models)/`GoogleGenerativeAIEmbeddings`
+  (Google `gemini-embedding-001`, the text → vector embedding model)
+  + `QdrantVectorStore` (Qdrant is the vector DB) + `retriever.invoke()` vs. our
   `embeddings.py`/`retrieve.py`; `ChatOllama`/`ChatOpenAI` vs. our
   provider-swap logic in `app/llm`; `ChatPromptTemplate` vs. manual
   f-string prompts; `bind_tools()`/`create_tool_calling_agent()` vs.
@@ -54,7 +55,7 @@ replace the hand-rolled version permanently.
 - **LangGraph** — stateful multi-step agent graphs, applied to the
   RAG-vs-CRM routing logic and any future multi-step agent work.
 - **LangSmith** — hosted tracing/evals, compared against our current
-  `logger.info(...)` lines + the `tool_audit_log` Postgres table.
+  `logger.info(...)` lines + the `tool_audit_log` Postgres table (records each MCP tool call).
 - **Other frameworks for RAG specifically** (most mature/competitive
   space) — LlamaIndex, Haystack, as alternatives to LangChain for the
   retrieval piece.

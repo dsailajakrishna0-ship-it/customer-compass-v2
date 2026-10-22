@@ -21,7 +21,7 @@ building a realistic application incrementally. It uses only synthetic CRM data.
 
 - Use VS Code as the primary IDE.
 - Use a modern AI-oriented learning stack: TypeScript, React/Vite, Express,
-  PostgreSQL, Docker Compose, Ollama, and a local Qwen2.5 3B model.
+  PostgreSQL, Docker Compose, Ollama (runs the local model), and a local Qwen2.5 3B model (the generating model that writes chat answers).
 - Keep Docker for infrastructure (PostgreSQL and Ollama); run UI and API locally
   for fast edit/reload cycles.
 - Work through ten stages (originally eight), stopping after each verified stage.
@@ -127,7 +127,7 @@ curl -X POST http://localhost:3001/api/documents/ingest
   - **Part I — Foundations**: Stages 1–3 (unchanged, all complete).
   - **Part II — Grounded Intelligence**: Stage 4 (new — cloud LLM provider
     option), Stage 5 (was Stage 4 — realistic CRM RAG), Stage 6 (was Stage 5 —
-    retrieval evaluation, enriched with an LLM-as-judge scorer).
+    retrieval evaluation, enriched with an LLM-as-judge scorer — a second model that grades answers).
   - **Part III — Trust & Safety**: Stage 7 (was Stage 6 — production
     concerns), Stage 8 (new — prompt-injection defense & guardrails).
   - **Part IV — Autonomy & Protocols**: Stage 9 (was Stage 7 — tool calling,
