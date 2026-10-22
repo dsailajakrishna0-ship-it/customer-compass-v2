@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.chat.router import classify_query
 from app.crm.queries import get_company_summary, list_companies
 from app.guardrails.audit import record_events
+from app.guardrails.llm_guard import guard_input
 from app.guardrails.prompt_guard import (
     GuardrailReport,
     add_findings,
@@ -199,7 +200,7 @@ async def general_chat(body: ChatRequest):
     """General-purpose chat, no CRM/document grounding (Stage 2 behavior)."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     try:
-        question_finding = scan_and_neutralize(body.messages[-1].content)
+        question_finding = await guard_input(body.messages[-1].content)
         messages = body.message_dicts
         messages[-1] = {**messages[-1], "content": question_finding.neutralized_text}
         report = build_report((question_finding, "user_input"))
@@ -225,7 +226,7 @@ async def rag_chat(body: ChatRequest):
     """Retrieval-augmented chat: retrieves cited chunks and grounds the answer in them."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     question = body.messages[-1].content
-    question_finding = scan_and_neutralize(question)
+    question_finding = await guard_input(question)
 
     try:
         # Retrieval uses the original question (redacting it first would hurt
@@ -281,7 +282,7 @@ async def crm_chat(body: ChatRequest):
     "" or "/rag" — additive, so their behavior is unchanged."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     question = body.messages[-1].content
-    question_finding = scan_and_neutralize(question)
+    question_finding = await guard_input(question)
 
     try:
         route = await classify_query(question)
@@ -384,7 +385,7 @@ async def tools_chat(body: ChatRequest):
     provider/model this project targets has native function-calling."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     question = body.messages[-1].content
-    question_finding = scan_and_neutralize(question)
+    question_finding = await guard_input(question)
     # The confirmation decision is made here, from the user's own raw latest
     # message -- never trusted from whatever "confirm" value the model itself
     # puts in a create_followup_task tool_call.
