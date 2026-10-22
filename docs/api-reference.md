@@ -219,6 +219,18 @@ to `tasks`. See
 [part-4-autonomy-protocols/09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md)
 for the full design and manual test steps.
 
+### `GET /api/v1/security-audit-log` (Stage 8.c)
+
+Returns recorded guardrail detections, newest first. Query params: `limit`
+(1–500, default 50), `event_type` (`input`, `document`, `tool`, `output`),
+`pattern` (e.g. `override_instructions`).
+
+```json
+[{ "id": 7, "event_type": "input", "endpoint": "chat/rag", "pattern": "override_instructions",
+   "location": "user_input", "excerpt": "Ignore all previous instructions",
+   "created_at": "2026-10-22 09:41:03+00" }]
+```
+
 ---
 
 ## `GET /api/v1/llm/models`
@@ -354,7 +366,7 @@ before it reached the LLM.
 | Field | Notes |
 | --- | --- |
 | `flagged` | `true` if any scanned text (the user's message, and for `/chat/rag`/`/chat/crm` each retrieved document chunk) matched a known injection pattern. |
-| `reasons` | One entry per match: `"<pattern_name> (<location>)"`. `location` is `"user_input"` or `"document: <document title>"`. Empty list when `flagged` is `false`. |
+| `reasons` | One entry per match: `"<pattern_name> (<location>)"`. `location` is `"user_input"`, `"document: <document title>"`, `"tool: ..."` or `"output"` (Stage 8.b: the model's answer was redacted for `system_prompt_leak`, `jailbreak_compliance` or `cross_customer_leak`). Pattern `llm_classifier` appears when `GUARD_MODE` is `llm`/`both` (8.d). Empty list when `flagged` is `false`. |
 
 Flagged text is **neutralized, not blocked** — the matched phrase is
 redacted before reaching the LLM, but the request still proceeds and still

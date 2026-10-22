@@ -257,6 +257,8 @@ the real MCP client) bridges that gap instead of branching per provider.
 | | Technology | Status |
 | --- | --- | --- |
 | **Active (default)** | Custom rule-based guard + delimited untrusted-content prompting | Stage 8 |
+| **Active (default)** | Output-side guard + Postgres `security_audit_log` | Stage 8.b / 8.c |
+| **Opt-in** | LLM-classifier guard (`GUARD_MODE=llm\|both`, Llama Guard pattern) | Stage 8.d |
 | **Alternatives worth exploring** | NeMo Guardrails, Llama Guard, Guardrails AI | Not yet wired in |
 
 ## Evaluation

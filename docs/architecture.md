@@ -32,7 +32,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 │  app/crm/queries.py — structured CRM fact lookups              │
 │  app/llm/         — provider.py (dispatch+fallback), cloud.py,│
 │                      ollama.py, types.py (GenerationResult)    │
-│  app/guardrails/  — prompt_guard.py (Stage 8 injection scan)  │
+│  app/guardrails/  — prompt_guard.py, audit.py, llm_guard.py (Stage 8)  │
 │  app/mcp/         — server.py/tools.py/client.py (Stage 9)    │
 └───────┬───────────────────┬───────────────────┬───────────────┘
         │                   │                   │

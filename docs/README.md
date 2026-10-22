@@ -32,7 +32,7 @@ disrupting earlier ones.
 | Stage | Status | Document |
 | --- | --- | --- |
 | 7. Production concerns | Complete | [07-production-concerns.md](part-3-trust-safety/07-production-concerns.md) |
-| 8. Prompt-injection defense & guardrails | Complete | [08-prompt-injection-guardrails.md](part-3-trust-safety/08-prompt-injection-guardrails.md) |
+| 8. Prompt-injection defense & guardrails (incl. 8.a adversarial set, 8.b output guard, 8.c audit log, 8.d LLM classifier) | Complete | [08-prompt-injection-guardrails.md](part-3-trust-safety/08-prompt-injection-guardrails.md) |
 
 ## Part IV — Autonomy & Protocols
 *Let the assistant act, using modern standards.*
