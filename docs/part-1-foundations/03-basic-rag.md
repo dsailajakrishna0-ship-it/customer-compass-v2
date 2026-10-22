@@ -69,6 +69,49 @@ operator (`1 - (dc.embedding <=> $1) AS similarity` in `retrieve.ts`) — no
 separate vector database is needed; the embeddings live in a normal
 `document_chunks` table column.
 
+## Vector indexing methods (concept + demo)
+
+Finding the nearest vectors by comparing against every stored vector is
+**exact (flat) search**: always correct, but cost grows with the number of
+chunks. A vector database builds an **index** to avoid that, trading a little
+accuracy (*recall*: how many of the true top-k it finds) for speed.
+
+| Method | Idea | Trade-off |
+| --- | --- | --- |
+| **Flat** | Compare against every vector | Perfect recall, slowest at scale |
+| **IVF** (inverted file; pgvector `ivfflat`) | Cluster vectors, search only the nearest clusters | Needs training data; recall depends on how many clusters are probed |
+| **HNSW** (hierarchical navigable small world; Qdrant's default, pgvector `hnsw`) | Layered graph of neighbours; walk it from coarse to fine | Fast and high recall; uses more memory and build time |
+
+HNSW knobs: `m` (links per node) and `ef_construct` (build effort) are set
+when the index is built; `hnsw_ef` (search effort) is set per query. Higher =
+better recall, slower. **Quantization** (storing smaller numbers per
+dimension) cuts memory further at some accuracy cost. A **payload index**
+(e.g. on `company_id`) makes filtered search fast, which is what our
+company-scoped queries use.
+
+**Our setup:** the Qdrant collection in `app/rag/qdrant_store.py` sets only
+the size (768) and cosine distance, so it uses Qdrant's **default HNSW**
+parameters, with no quantization and no payload index. With 16 documents an
+index makes no visible difference; it matters at far larger scale.
+
+**Demo:** `evals/vector_index_demo.py` (needs a real Qdrant server; usage is
+in the file's docstring) runs 20,000 synthetic 768-dim clustered vectors and
+compares the methods. One local run:
+
+| Search | recall@10 | ms/query |
+| --- | --- | --- |
+| Exact (flat) | 1.00 | 7.7 |
+| HNSW `ef=8` | 0.96 | 3.7 |
+| HNSW `ef=32` | 1.00 | 3.1 |
+| HNSW `ef=128` | 1.00 | 4.2 |
+| Filtered, no payload index | 1.00 | 7.0 |
+| Filtered, with payload index | 1.00 | 4.0 |
+
+Read these as the shape of the trade-off, not benchmarks: the data is
+synthetic and small, timings are noisy, and the gap grows with collection
+size. IVF was **not** measured here (Qdrant doesn't offer it); it is only
+described.
+
 ## Implemented design
 
 ```text
