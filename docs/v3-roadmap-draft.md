@@ -60,6 +60,18 @@ replace the hand-rolled version permanently.
   space) — LlamaIndex, Haystack, as alternatives to LangChain for the
   retrieval piece.
 
+## Tooling decisions
+
+**Guiding rule:** prefer the latest, industry-standard tools, and write down a reason for any exception.
+
+- **JavaScript package manager: pnpm** (via Corepack, with `packageManager`
+  pinned in `package.json`), with `pnpm-workspace.yaml` for any multi-package
+  layout. Why: fast installs through a shared store, strict dependency
+  resolution (code can only import what it declares), and cleaner monorepo
+  support (`--filter`) than npm workspaces. A new repo has no migration cost.
+- **v2 stays on npm.** v2 is not migrated; this applies to V3 only.
+- Python stays on `uv`.
+
 ## Explicitly NOT in V3
 
 - **docs-only-audit-pr** — stays in v2. It's about restricting v2's
