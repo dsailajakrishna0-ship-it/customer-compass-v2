@@ -222,6 +222,14 @@ Everything else, including all 4 benign prompts, should pass.
 cd evals && npx promptfoo@latest eval -j 1 -c adversarial.promptfooconfig.yaml
 ```
 
+To browse results in the promptfoo UI (separate from the app's own UI on
+port 5173; `npm run dev` does not start it), run this from `evals/` and leave
+it open, then visit http://localhost:15500:
+
+```bash
+npx promptfoo@latest view
+```
+
 **Step 3 — 8.c audit log.** Send an attack, then read it back.
 
 ```bash
