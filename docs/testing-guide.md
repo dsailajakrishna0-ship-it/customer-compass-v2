@@ -53,14 +53,43 @@ volumes and reseed from scratch (e.g. after an `init.sql` change).
 
 ## 2. URLs to open and monitor
 
-| URL | What it's for |
-| --- | --- |
-| `http://localhost:5173` | The web app itself. |
-| `http://localhost:8001/health` | Backend health check — confirms the API is up and can reach Postgres. |
-| `http://localhost:8001/docs` | Live interactive Swagger UI for every API endpoint — good for poking at the API directly without the frontend. |
-| `http://localhost:6333/dashboard` | Qdrant's built-in web UI — inspect the `document_chunks` collection, point counts, payloads. |
-| `docker compose logs -f api-py` | Backend request/error logs, including the `llm_usage` line (Stage 7 telemetry) logged on every chat answer. |
-| `docker ps --format "{{.Names}}\t{{.Status}}"` | Confirms all 4 containers (`db`, `qdrant`, `ollama`, `api-py`) are actually `Up`, not silently stuck in `Created`. |
+One place for every URL, port and command used across the stages. Start
+commands are in section 1; stage-specific steps are in the linked docs.
+
+### Always running (after `docker compose up -d db qdrant ollama api-py` and `npm run dev`)
+
+| URL / command | What it's for | Started by |
+| --- | --- | --- |
+| `http://localhost:5173` | The web app itself (React UI). | `cd apps/web && npm run dev` |
+| `http://localhost:8001/health` | Backend health check: API is up and can reach Postgres. | `api-py` container |
+| `http://localhost:8001/docs` | Live interactive Swagger UI for every API endpoint; try requests without the frontend. | `api-py` container |
+| `http://localhost:6333/dashboard` | Qdrant's built-in web UI: inspect the `document_chunks` collection, point counts, payloads (Stage 3). | `qdrant` container |
+| `http://localhost:11435/api/tags` | Ollama (local generating model): lists pulled models, confirms it is up. Host port 11435 maps to 11434 in the container. | `ollama` container |
+| `localhost:5432` (not a browser URL) | Postgres. Use `docker exec -it customer-compass-v2-db psql -U customer_compass -d customer_compass`, or a DB client (see the Stage 3 doc). | `db` container |
+| `docker compose logs -f api-py` | Backend request/error logs, including the `llm_usage` line (Stage 7) and `prompt_guard_flagged` warnings (Stage 8). | any time |
+| `docker ps --format "{{.Names}}\t{{.Status}}"` | Confirms all 4 containers (`db`, `qdrant`, `ollama`, `api-py`) are `Up`, not stuck in `Created`. | any time |
+
+### API endpoints to open or `curl` (base `http://localhost:8001/api/v1`)
+
+| Endpoint | Stage | What you see |
+| --- | --- | --- |
+| `GET /companies`, `GET /companies/{id}` | 5 | CRM companies and one company's detail. |
+| `GET /documents`, `GET /documents/ingestion-runs` | 3 | Ingested documents and ingestion history. `POST /documents/ingest` loads the sample data. |
+| `GET /llm/models` | 7 | Cloud (OpenRouter) models the UI dropdown offers. |
+| `POST /chat`, `/chat/rag`, `/chat/crm`, `/chat/tools` | 2, 3, 5, 9 | The four chat modes; every response includes `guardrail` (Stage 8). |
+| `GET /tasks` | 9 | Follow-up tasks created by the tool-calling copilot. |
+| `GET /tool-audit-log?limit=10` | 9 | Every MCP tool call (executed / proposed / confirmed / error). |
+| `GET /security-audit-log?limit=5` | 8.c | Guardrail detections; filters `event_type`, `pattern`. |
+
+### Tools you start only when needed
+
+| URL | Command (run from the repo root) | What it's for |
+| --- | --- | --- |
+| `http://localhost:15500` | `cd evals && npx promptfoo@latest view` | promptfoo results viewer for the Stage 6 retrieval suite and the Stage 8.a adversarial suite. Separate from the app UI; `npm run dev` does not start it. Run `npx promptfoo@latest eval -j 1 -c <config>` first (see `evals/README.md`). |
+| `http://localhost:6335/dashboard` | `docker run -d --rm --name qdrant-demo -p 6335:6333 qdrant/qdrant` | Throw-away Qdrant for the vector-index demo (`evals/vector_index_demo.py`, Stage 3 doc). Uses 6335 so it never clashes with the app's Qdrant on 6333. Stop with `docker stop qdrant-demo`. |
+
+Port summary: 5173 web app, 8001 API, 6333/6334 Qdrant (REST/gRPC), 11435
+Ollama, 5432 Postgres, 15500 promptfoo viewer, 6335 demo Qdrant.
 
 ## 3. The dropdowns, and what each combination means
 
