@@ -1,7 +1,7 @@
 # Stage 8 — Prompt-injection defense and guardrails
 
 **Part:** III — Trust & Safety
-**Status:** Done
+**Status:** Done (base guard) + 8.a–8.d extensions
 
 ## Goal
 
@@ -28,7 +28,7 @@ process as Stage 7):
    to the person testing it.
 
 This is a **narrower, more concrete** version of the original Stage 8 plan
-(see "Deferred" section below for what was intentionally left out).
+(see "Extensions: Stages 8.a–8.d" below for what was added afterwards).
 
 ## Threat model
 
@@ -169,24 +169,75 @@ Files from this increment:
 - `apps/web/src/hooks/useChat.ts` — passes `guardrail` through.
 - `apps/web/src/components/chat/MessageBubble.tsx` — `GuardrailWarning` tag.
 
-## Deferred: the original broader scope
+## Extensions: Stages 8.a–8.d
 
-The original Stage 8 plan (from before this session's scoping discussion)
-was considerably broader, and remains a reasonable reference for anyone
-wanting to take this further:
+The original, broader Stage 8 plan was split into four sub-stages, all built
+on top of the base guard above.
 
-- An **adversarial test set** of known injection patterns as a versioned
-  fixture (`evals/adversarial-prompts.json`), run repeatably via the
-  promptfoo (an eval harness that sends test questions to the live API and grades the answers) eval suite (Stage 6) rather than only ad-hoc manual testing.
-- An **output-side guardrail**, not just input/document-side: checking the
-  model's *generated* answer for signs it leaked cross-customer data or
-  complied with an embedded instruction, independent of whether the input
-  was flagged.
-- A real **security audit log**, separate from the general app log, with
-  its own retention/query story (the current implementation just emits a
-  structured warning into the normal application logger).
-- Evaluating a dedicated guardrails framework (NeMo Guardrails, Llama
-  Guard, Guardrails AI) in place of (or alongside) the hand-rolled
-  rule-based scan, as a framework-comparison exercise — see the
-  `framework-side-exercises` todo for the broader "hand-rolled vs.
-  framework" comparison plan this would fit into.
+### 8.a — Adversarial test set
+
+`evals/adversarial-prompts.json` is a versioned fixture of 19 prompts
+(15 attacks across the six pattern categories, 4 benign CRM questions). Each
+has `is_attack` (ground truth) and `rules_catch` (what the regex rules are
+expected to do, so known gaps are explicit).
+
+- `apps/api-py/tests/test_adversarial_set.py` runs the fixture through the
+  rules offline (no LLM needed).
+- `evals/adversarial.promptfooconfig.yaml` (promptfoo, the eval harness)
+  sends every prompt to the live `/api/v1/chat` endpoint and checks
+  `guardrail.flagged`. With `GUARD_MODE=rules` the 5 paraphrase/obfuscation
+  cases (override-03/04, leak-03, role-03, exfil-02) fail on purpose; that is
+  the measured gap 8.d addresses.
+
+### 8.b — Output-side guardrail
+
+`scan_output()` in `prompt_guard.py` checks the model's **generated answer**
+(in all four chat routes) for: `system_prompt_leak` (the answer quotes the
+system prompt or the `<untrusted_context>` delimiters),
+`jailbreak_compliance` ("DAN mode enabled" style) and `cross_customer_leak`
+(on `/chat/crm`, when the question is scoped to one company, any other
+company's name). Matches are redacted with
+`[REDACTED: removed by output guardrail]` and added to the same `guardrail`
+object with location `output`. It runs whether or not the input was flagged.
+
+### 8.c — Security audit log
+
+Every detection (input, document, tool result, output) is written to the
+Postgres table `security_audit_log` (`event_type`, `endpoint`, `pattern`,
+`location`, a truncated `excerpt`, `created_at`) by
+`app/guardrails/audit.py`. The table is created with `IF NOT EXISTS` at API
+startup (so existing volumes need no reset) and is also in `db/init.sql`.
+Rows older than `SECURITY_AUDIT_RETENTION_DAYS` (default 90) are purged at
+startup. A write failure is logged and never fails the chat request. Review
+with `GET /api/v1/security-audit-log` (filters: `limit`, `event_type`,
+`pattern`).
+
+Excerpts are the matched phrase only (max 120 chars), not the whole message.
+
+### 8.d — LLM-classifier guard and framework comparison
+
+`app/guardrails/llm_guard.py` adds an opt-in classifier in the Llama Guard
+style: an LLM (here a generating model, local Ollama by default) answers
+SAFE or UNSAFE for the user message. Set `GUARD_MODE` to `rules` (default,
+no extra LLM call), `llm` or `both`; `GUARD_PROVIDER`/`GUARD_MODEL` pick the
+classifier model. It is detection-only (flags and audits, does not redact)
+and fails open if the model is unreachable.
+
+`evals/compare_guards.py` measures strategies on the 8.a fixture:
+
+```bash
+cd apps/api-py
+PYTHONPATH=. uv run python ../../evals/compare_guards.py          # rules, offline
+PYTHONPATH=. uv run python ../../evals/compare_guards.py --llm    # + classifier (needs Ollama)
+```
+
+Measured so far: **rules catch 10/15 attacks with 0 false positives**; the 5
+misses are paraphrase/obfuscation. The classifier numbers have **not** been
+measured (no Ollama in the build environment); run with `--llm` to fill them
+in. **NeMo Guardrails and Guardrails AI were not installed or evaluated**;
+only the Llama-Guard-style pattern was implemented, so a full framework
+comparison remains open.
+
+Trade-off to expect: the classifier adds one extra LLM call (latency/cost)
+per request and can false-positive; the rules are free and instant but
+brittle.
