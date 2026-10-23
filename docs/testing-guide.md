@@ -201,8 +201,8 @@ phrasing directly in the chat box:
 
 #### How to test Stages 8.a–8.d (PR #14)
 
-Start the stack as in section 1 (`docker compose up -d --build api-py`; the
-`--build` matters because the code under `apps/api-py/app/` changed).
+Start the stack as in section 1, but rebuild the API: `docker compose up -d --build db qdrant ollama api-py` (the
+`--build` matters because the code under `apps/api-py/app/` changed; `docker-compose` with a hyphen also works).
 
 **Step 1 — offline unit tests (no Docker needed).** Expect only
 `test_health` to fail, and only if Postgres is not running.
