@@ -59,6 +59,19 @@ CREATE TABLE tool_audit_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Stage 8.c: every guardrail detection (input, document, tool result, model
+-- output). The API also creates this with IF NOT EXISTS at startup so
+-- volumes created before Stage 8.c get it without a reset.
+CREATE TABLE security_audit_log (
+  id SERIAL PRIMARY KEY,
+  event_type TEXT NOT NULL CHECK (event_type IN ('input', 'document', 'tool', 'output')),
+  endpoint TEXT NOT NULL,
+  pattern TEXT NOT NULL,
+  location TEXT NOT NULL,
+  excerpt TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 INSERT INTO companies (name, industry, website, relationship_status) VALUES
   ('Acme Fabrication', 'Manufacturing', 'https://acme-fabrication.example', 'customer'),
   ('Northstar Logistics', 'Logistics', 'https://northstar-logistics.example', 'lead'),

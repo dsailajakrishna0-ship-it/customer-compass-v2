@@ -11,11 +11,15 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from app.chat.router import classify_query
-from app.crm.queries import get_company_summary
+from app.crm.queries import get_company_summary, list_companies
+from app.guardrails.audit import record_events
+from app.guardrails.llm_guard import guard_input
 from app.guardrails.prompt_guard import (
     GuardrailReport,
+    add_findings,
     build_report,
     scan_and_neutralize,
+    scan_output,
     wrap_untrusted_context,
 )
 from app.llm.provider import DEFAULT_LLM_PROVIDER, ChatMessage, LlmProvider, generate
@@ -144,16 +148,25 @@ def _usage_json(result: GenerationResult) -> dict:
     return usage
 
 
-def _guardrail_json(report: GuardrailReport) -> dict:
-    """Stage 8 guardrail telemetry: whether a prompt-injection attempt was
-    detected (in the user's message and/or a retrieved document) and
-    neutralized before reaching the LLM, and why. Logged as a warning
-    server-side and returned to the frontend so it can show a visible tag,
-    mirroring Stage 7's fallback visibility."""
+async def _finalize(
+    endpoint: str, report: GuardrailReport, answer: str, scoped_company: str | None = None
+) -> tuple[str, dict]:
+    """Stage 8.b + 8.c: scans the model's answer (leaks, cross-customer
+    names), merges that into the report, writes every detection to the
+    security audit log, and returns (safe answer, guardrail telemetry for the
+    frontend). Logged as a warning server-side, mirroring Stage 7's fallback
+    visibility."""
+    try:
+        names = [company.name for company in await list_companies()] if scoped_company else []
+    except Exception:  # noqa: BLE001 - output scan still runs without the name list
+        names = []
+    output_finding = scan_output(answer, scoped_company, names)
+    report = add_findings(report, (output_finding, "output"))
     guardrail = {"flagged": report.flagged, "reasons": report.reasons}
     if report.flagged:
         logger.warning("prompt_guard_flagged %s", guardrail)
-    return guardrail
+        await record_events(endpoint, report.events)
+    return output_finding.neutralized_text, guardrail
 
 
 def _facts_json(facts) -> dict | None:
@@ -187,17 +200,18 @@ async def general_chat(body: ChatRequest):
     """General-purpose chat, no CRM/document grounding (Stage 2 behavior)."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     try:
-        question_finding = scan_and_neutralize(body.messages[-1].content)
+        question_finding = await guard_input(body.messages[-1].content)
         messages = body.message_dicts
         messages[-1] = {**messages[-1], "content": question_finding.neutralized_text}
         report = build_report((question_finding, "user_input"))
 
         result = await generate(GENERAL_SYSTEM_PROMPT, messages, resolved_provider, body.model)
+        answer, guardrail = await _finalize("chat", report, result.content)
         return {
-            "message": result.content,
+            "message": answer,
             "provider": result.provider,
             "usage": _usage_json(result),
-            "guardrail": _guardrail_json(report),
+            "guardrail": guardrail,
         }
     except Exception as exc:  # noqa: BLE001 - surfaced as a clear 503, mirrors the Express route
         raise HTTPException(
@@ -212,18 +226,19 @@ async def rag_chat(body: ChatRequest):
     """Retrieval-augmented chat: retrieves cited chunks and grounds the answer in them."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     question = body.messages[-1].content
-    question_finding = scan_and_neutralize(question)
+    question_finding = await guard_input(question)
 
     try:
         # Retrieval uses the original question (redacting it first would hurt
         # embedding quality) -- only what reaches the LLM gets neutralized.
         chunks = await retrieve_relevant_chunks(question)
         if not chunks:
+            _, guardrail = await _finalize("chat/rag", build_report((question_finding, "user_input")), "")
             return {
                 "message": "I could not find any ingested documents relevant to that question.",
                 "citations": [],
                 "provider": resolved_provider,
-                "guardrail": _guardrail_json(build_report((question_finding, "user_input"))),
+                "guardrail": guardrail,
             }
 
         chunk_findings = [scan_and_neutralize(chunk.content) for chunk in chunks]
@@ -247,12 +262,13 @@ async def rag_chat(body: ChatRequest):
         # Citations/snippets still show the ORIGINAL chunk content, so the
         # user can see exactly what was retrieved, including the flagged text.
         citations = [_citation(i, chunk) for i, chunk in enumerate(chunks)]
+        answer, guardrail = await _finalize("chat/rag", report, result.content)
         return {
-            "message": result.content,
+            "message": answer,
             "citations": citations,
             "provider": result.provider,
             "usage": _usage_json(result),
-            "guardrail": _guardrail_json(report),
+            "guardrail": guardrail,
         }
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=str(exc) or "Could not answer with retrieval.") from exc
@@ -266,7 +282,7 @@ async def crm_chat(body: ChatRequest):
     "" or "/rag" — additive, so their behavior is unchanged."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     question = body.messages[-1].content
-    question_finding = scan_and_neutralize(question)
+    question_finding = await guard_input(question)
 
     try:
         route = await classify_query(question)
@@ -275,6 +291,7 @@ async def crm_chat(body: ChatRequest):
         chunks = await retrieve_relevant_chunks(question, route.company.id if route.company else None) if route.wants_rag else []
 
         if not facts and not chunks:
+            _, guardrail = await _finalize("chat/crm", build_report((question_finding, "user_input")), "")
             return {
                 "message": (
                     "I could not find a matching company or deal data for that question."
@@ -285,7 +302,7 @@ async def crm_chat(body: ChatRequest):
                 "citations": [],
                 "scopedCompany": route.company.name if route.company else None,
                 "provider": resolved_provider,
-                "guardrail": _guardrail_json(build_report((question_finding, "user_input"))),
+                "guardrail": guardrail,
             }
 
         facts_block = None
@@ -332,14 +349,16 @@ async def crm_chat(body: ChatRequest):
         # Citations/snippets still show the ORIGINAL chunk content.
         citations = [_citation(i, chunk) for i, chunk in enumerate(chunks)]
 
+        scoped = route.company.name if route.company else None
+        answer, guardrail = await _finalize("chat/crm", report, result.content, scoped)
         return {
-            "message": result.content,
+            "message": answer,
             "facts": _facts_json(facts),
             "citations": citations,
             "scopedCompany": route.company.name if route.company else None,
             "provider": result.provider,
             "usage": _usage_json(result),
-            "guardrail": _guardrail_json(report),
+            "guardrail": guardrail,
         }
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=str(exc) or "Could not answer the CRM question.") from exc
@@ -366,7 +385,7 @@ async def tools_chat(body: ChatRequest):
     provider/model this project targets has native function-calling."""
     resolved_provider = body.provider or DEFAULT_LLM_PROVIDER
     question = body.messages[-1].content
-    question_finding = scan_and_neutralize(question)
+    question_finding = await guard_input(question)
     # The confirmation decision is made here, from the user's own raw latest
     # message -- never trusted from whatever "confirm" value the model itself
     # puts in a create_followup_task tool_call.
@@ -441,12 +460,13 @@ async def tools_chat(body: ChatRequest):
                 result = await generate(system_prompt, conversation, resolved_provider, body.model)
 
             report = build_report(*findings)
+            answer, guardrail = await _finalize("chat/tools", report, result.content)
             return {
-                "message": result.content,
+                "message": answer,
                 "toolsUsed": tools_used,
                 "provider": result.provider,
                 "usage": _usage_json(result),
-                "guardrail": _guardrail_json(report),
+                "guardrail": guardrail,
             }
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=str(exc) or "Could not answer using tools.") from exc
