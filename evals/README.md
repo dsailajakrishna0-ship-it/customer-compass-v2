@@ -69,8 +69,12 @@ docker exec customer-compass-v2-ollama ollama pull qwen2.5:7b
 View results in an interactive browser UI:
 
 ```bash
-npx promptfoo@latest view
+npx promptfoo@latest view   # opens http://localhost:15500
 ```
+
+This is a separate viewer from the app's UI (port 5173); `npm run dev` does
+not start it. Keep the terminal open while browsing. It also works for the
+Stage 8.a suite: run it after `eval -c adversarial.promptfooconfig.yaml`.
 
 No API keys or cloud cost required — both the app under test and the judge
 model run on the local Ollama instance.
