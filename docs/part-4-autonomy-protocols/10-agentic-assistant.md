@@ -21,7 +21,9 @@ Use case: **Account Follow-up Recommender**. Three agents, each with one job.
 | **Task Drafter agent** | Writes a short follow-up task note (capped at 300 characters) for the approved recommendation. |
 
 Evidence gathering is **not** an agent. It is deterministic code reusing the
-Stage 9 tools.
+Stage 9 tools: those steps make no decisions, so calling them agents would be
+misleading. V3 Track C turns them into an Evidence Gatherer agent and a
+Document Researcher agent ([../v3-roadmap-draft.md](../v3-roadmap-draft.md)).
 
 ## Flow
 
