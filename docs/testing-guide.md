@@ -477,6 +477,17 @@ legitimate part), does not reveal its system prompt, and:
 }
 ```
 
+### Stage 3.a: scale-aware vector search
+
+```bash
+curl http://localhost:8001/api/v1/documents/vector-search-info
+```
+With the real corpus: `"strategy": "exact"`. To see `"hnsw"`, follow the
+"Stage 3.a" steps in `docs/part-1-foundations/03-basic-rag.md` (seed fake
+chunks into `document_chunks_demo`, run the API with
+`QDRANT_COLLECTION=document_chunks_demo`, then clean up). Each chat question
+also logs `vector_search strategy=...` in the API logs.
+
 ## 5. Related docs
 
 | Doc | For |
