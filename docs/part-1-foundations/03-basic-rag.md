@@ -121,8 +121,17 @@ parameters, with no quantization and no payload index. With 16 documents an
 index makes no visible difference; it matters at far larger scale.
 
 **Demo:** `evals/vector_index_demo.py` (needs a real Qdrant server; usage is
-in the file's docstring) runs 20,000 synthetic 768-dim clustered vectors and
-compares the methods. One local run:
+in the file's docstring). Run it from the branch/checkout that contains the
+file:
+
+```bash
+docker run -d --rm --name qdrant-demo -p 6335:6333 qdrant/qdrant
+cd apps/api-py && uv run python ../../evals/vector_index_demo.py http://localhost:6335
+docker stop qdrant-demo
+```
+
+It creates 20,000 synthetic, clustered 768-dim vectors (the size of our
+Gemini embeddings), then compares the methods. One local run:
 
 | Search | recall@10 | ms/query |
 | --- | --- | --- |
@@ -137,6 +146,100 @@ Read these as the shape of the trade-off, not benchmarks: the data is
 synthetic and small, timings are noisy, and the gap grows with collection
 size. IVF was **not** measured here (Qdrant doesn't offer it); it is only
 described, as are LSH and PQ.
+
+### Reading the demo output
+
+A second run on another machine printed:
+
+```text
+20000 vectors, 768 dims, cosine; indexed_vectors_count=20000
+
+Unfiltered search (recall@10 against exact search)
+  exact (flat)   recall 1.00     6.48 ms/query
+  HNSW ef=8     recall 0.95     2.50 ms/query
+  HNSW ef=32    recall 1.00     2.75 ms/query
+  HNSW ef=128   recall 1.00     3.55 ms/query
+
+Filtered search, company_id = 3 (ef=32)
+  no payload index   recall 1.00     5.39 ms/query
+  with payload index recall 1.00     3.48 ms/query
+```
+
+Line by line:
+
+- **Header.** 20,000 random vectors of 768 numbers each, compared by cosine.
+  `indexed_vectors_count=20000` means Qdrant finished building the HNSW index
+  over all of them; the script waits for this so timings are not skewed by a
+  half-built index.
+- **Unfiltered search.** 100 queries, each asking for the 10 nearest vectors.
+  *Recall* is how many of the true top 10 the method returned.
+  - *Exact (flat)* compares the query with all 20,000 vectors. It is the
+    reference, so recall is 1.00 by definition, and it is the slowest.
+  - *HNSW `ef=8`* explores few candidates: fastest, but recall dipped to 0.95
+    (about 1 true neighbour in 20 missed). This is the "approximate" in ANN.
+  - *HNSW `ef=32`* gets recall back to 1.00 at about the same speed: for this
+    data, 32 is already enough.
+  - *HNSW `ef=128`* is still 1.00 but slower. Extra effort bought nothing.
+- **Filtered search** (`company_id = 3`, one of 7 fake companies, like our
+  company scoping). Without a payload index Qdrant checks each candidate's
+  `company_id` while walking the graph; with one it can jump to the matching
+  points, so it is faster and recall stays 1.00.
+
+What to take away:
+
+1. ANN is already about 2x faster at 20,000 vectors, and the gap grows with
+   size (millions of vectors show far larger gaps).
+2. `ef` is a dial: raise it for accuracy, lower it for speed; past a point more
+   effort only costs time.
+3. If you filter on a field (like company), index that field.
+
+Caveats: random clustered vectors can behave differently from real text
+embeddings, timings are noisy (compare the ordering, not exact values), and
+this says nothing about our own 16 documents, which are too few for an index
+to matter. To see the gap widen, raise `N` in the script to 100,000.
+
+### In a real system (how the app would use this at scale)
+
+The demo generates fake rows because it only needs vectors to search. A real
+app does not generate data; it already has documents and needs the same steps
+our pipeline already follows, with a few changes at scale.
+
+1. **Embed real chunks.** Documents are split into chunks and each chunk is
+   embedded by the model (`embed_text` with `gemini-embedding-001`, 768 dims).
+2. **Store them with a payload.** Each chunk becomes a Qdrant *point*: the
+   vector plus a payload (document title, company id, chunk text, source path),
+   so a hit can be cited without another database lookup
+   (`upsert_chunks` in `app/rag/qdrant_store.py`).
+3. **The index builds itself.** The app never calls an "index" function. Qdrant
+   builds the HNSW graph in the background as points arrive (once a segment
+   passes its indexing threshold). That is the `indexed_vectors_count` the demo
+   waits on.
+4. **Query time.** The question is embedded with the same model, then
+   `query_points(..., query_filter=..., limit=top_k)` returns the nearest chunks
+   (`retrieve_relevant_chunks` in `app/rag/retrieve.py`). We then drop anything
+   below `MIN_SIMILARITY` and pass the rest to the LLM as numbered context.
+   Search is approximate, but the LLM only needs the relevant chunks in the
+   top few.
+5. **Filtering.** Company scoping is a payload filter. Today we have no payload
+   index on `company_id`, which is fine for 16 documents; at scale we would
+   create one with `create_payload_index`, as the demo does.
+
+What would have to change for a big corpus (our app is **not** built this way
+yet):
+
+- **Ingestion.** `recreate_collection()` deletes and rebuilds the whole
+  collection on every ingest. That is fine for 16 files; at scale you would
+  upsert only new or changed chunks and delete removed ones, and batch the
+  uploads and embedding calls.
+- **Tuning.** Keep the default HNSW settings until measurements say otherwise.
+  Then pick `m`, `ef_construct` and per-query `hnsw_ef` by measuring recall@k
+  and latency on **your own** questions, as the demo does on synthetic ones.
+- **Memory.** Millions of 768-dim float vectors are large. Options are
+  quantization (smaller numbers per dimension), keeping vectors on disk, or
+  sharding across nodes.
+- **Quality checks.** Keep a set of real questions with known right chunks and
+  track recall@k (the Stage 6 promptfoo suite is the start of this), so index
+  changes do not silently hurt answers.
 
 ## Implemented design
 
