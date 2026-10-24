@@ -77,7 +77,7 @@ services:
       VECTOR_INDEX_MIN_POINTS: ${VECTOR_INDEX_MIN_POINTS:-10000}
       VECTOR_HNSW_EF: ${VECTOR_HNSW_EF:-64}
       AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-8}  # Stage 10: step limit per agent run
-      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-60}
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-180}
       AGENT_MAX_REVISIONS: ${AGENT_MAX_REVISIONS:-1}
     volumes:
       - ./sample-data:/sample-data:ro

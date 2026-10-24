@@ -20,14 +20,14 @@ class AgentLimits:
     # A normal run is 6 steps (3 evidence + Analyst + Reviewer + Task Drafter);
     # a revision round adds 2 more (Analyst again, Reviewer again).
     max_steps: int = 8
-    timeout_seconds: float = 60.0
+    timeout_seconds: float = 180.0
     max_revisions: int = 1
 
     @classmethod
     def from_env(cls) -> "AgentLimits":
         return cls(
             max_steps=int(os.environ.get("AGENT_MAX_STEPS", "8")),
-            timeout_seconds=float(os.environ.get("AGENT_TIMEOUT_SECONDS", "60")),
+            timeout_seconds=float(os.environ.get("AGENT_TIMEOUT_SECONDS", "180")),
             max_revisions=int(os.environ.get("AGENT_MAX_REVISIONS", "1")),
         )
 
