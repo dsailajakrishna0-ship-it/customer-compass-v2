@@ -110,10 +110,10 @@ Reimplements existing hand-rolled pieces using well-known frameworks. As of
 the 2026-10-25 revision above, the framework version **replaces** the
 hand-written one in V3 (V2 remains the hand-built baseline).
 
-- **LangChain core** — `OllamaEmbeddings` (Ollama runs local models)/`GoogleGenerativeAIEmbeddings`
+- **LangChain core** — `GoogleGenerativeAIEmbeddings`
   (Google `gemini-embedding-001`, the text → vector embedding model)
   + `QdrantVectorStore` (Qdrant is the vector DB) + `retriever.invoke()` vs. our
-  `embeddings.py`/`retrieve.py`; `ChatOllama`/`ChatOpenAI` vs. our
+  `embeddings.py`/`retrieve.py`; `ChatOpenAI` (pointed at OpenRouter) vs. our
   provider-swap logic in `app/llm`; `ChatPromptTemplate` vs. manual
   f-string prompts; `bind_tools()`/`create_tool_calling_agent()` vs.
   our hand-rolled Stage 9 MCP fenced-text protocol.
