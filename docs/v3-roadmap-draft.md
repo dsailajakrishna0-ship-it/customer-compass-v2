@@ -3,6 +3,72 @@
 > Planning note only — not yet committed to any repo. Move into
 > `docs/` of the new `customer-compass-v3` repo once that repo exists.
 
+## Revision 2026-10-25 — decisions after V2 closed
+
+V2 (Stages 1–10) is concluded. These decisions change the plan below; where
+they conflict with older text, **this section wins**.
+
+1. **Frameworks replace most hand-written plumbing in V3.** Track B is no
+   longer "compare, don't replace". V2 stays as the hand-built baseline.
+2. **Orchestration: LangGraph.** Human-in-the-loop pauses map to the Stage 10
+   confirm gate. Other frameworks (OpenAI Agents SDK, Pydantic AI, CrewAI) are
+   not adopted; compare only if there is a specific reason.
+3. **Cloud models only.** Ollama, `app/llm/ollama.py`, the local UI option and
+   the `ollama` container are removed. Fallback becomes cloud-to-cloud.
+4. **Free tiers only** (no paid budget). Known risk, seen in V2: free models
+   rate-limit (HTTP 429) and change availability. Mitigations: a configurable
+   list of models across more than one free provider, retry with backoff, and
+   mocked models in tests and CI. Check each provider's current free limits
+   before relying on them.
+5. **CRM grows by three modules** to give agents real data and tools:
+   support tickets, contracts and renewals, and meeting/email notes.
+
+### What gets replaced, and what does not
+
+| Area | V2 (hand-written) | V3 |
+| --- | --- | --- |
+| Agent orchestration | Plain-code workflow (`agent/workflow.py`) | **LangGraph** graph with interrupt-before-write |
+| Tool calling | Fenced-text protocol (Stage 9) | Native function calling + official **MCP Python SDK / FastMCP** |
+| Model access | `app/llm/` provider, fallback, cloud client | **LangChain chat models** (or LiteLLM for routing/fallback) |
+| Agent output parsing | Hand-parsed JSON | **Pydantic** structured output |
+| RAG | `retrieve.py`, `embeddings.py` | LangChain or LlamaIndex over the same Qdrant |
+| Document ingestion | Markdown only | Docling or Unstructured (PDF, Word, Excel) |
+| Guardrails | Rules + LLM guard | Compare ours with Llama Guard / NeMo Guardrails; keep whichever wins |
+| Tracing | Log lines + `tool_audit_log` | **Langfuse** (self-hostable) or LangSmith free tier |
+| Evals | promptfoo | Keep promptfoo; add Ragas or DeepEval |
+
+**Not replaced:** CRM SQL queries, the confirm-before-write rule, the audit
+log table, and the domain tests. The Stage 10 tests must pass unchanged
+against the LangGraph version to show the behaviour is the same. Pin framework
+versions and record why each was chosen (see "Tooling decisions").
+
+### Cloud-only consequences to handle
+- Remove Ollama from `docker-compose.yml`, `.env.example`, the model dropdown,
+  the Stage 7 fallback path, the LLM guard and tests; update the docs.
+- No offline development; tests must mock the model.
+- Timeouts and step limits (Stage 10: 8 steps, 180 s) were set for a slow local
+  CPU model and should be re-measured on cloud models.
+
+### New CRM modules and the agents they enable
+
+| Module | Agent / use |
+| --- | --- |
+| **Support tickets** | Triage agent: classify, route, find similar past tickets |
+| **Contracts and renewals** | Renewal-risk agent |
+| **Meeting and email notes** | Meeting summarizer agent (feeds the Analyst agent's evidence) |
+
+A supervisor agent routes between these agents and the Stage 10 agents.
+Invoices/billing and a separate knowledge base were considered and left out
+for now; the Document Researcher agent uses the existing documents.
+
+### Revised order
+0. New repo from V2; cloud-only models; free-tier model list with fallback.
+1. Model layer, native tool calling and MCP SDK.
+2. Port Stage 10 to LangGraph with the same API and tests.
+3. Add the three data modules and their tools.
+4. Grow to 5 agents plus a supervisor.
+5. Tracing, evals and the guardrail comparison.
+
 ## Why a new repo, not a branch
 
 `customer-compass-v2` is being kept as a **clean, linear, closed
@@ -14,8 +80,7 @@ exercises onto it would blur that focus and make it harder to point
 back to as "here's what stage N looked like."
 
 `customer-compass-v3` starts fresh, seeded from v2's final state,
-once v2 is considered "done" (Stage 9 merged, docs-only audit PR
-landed, any further core stages complete). V3's learning goal shifts
+once v2 is considered "done" (Stages 1–10 merged; closed 2026-10-25), seeded from v2's final state. V3's learning goal shifts
 from *"build the fundamentals by hand"* to *"how do frameworks/tools
 accelerate or change this, and what else can the product do."*
 
@@ -41,14 +106,14 @@ Extends what the app can actually do for a user.
   infra-level autoscaling as likely out of scope for a learning repo.
 
 ### Track B — Framework exploration
-Reimplements existing hand-rolled pieces using well-known frameworks,
-purely to compare control/transparency vs. speed/ecosystem — not to
-replace the hand-rolled version permanently.
+Reimplements existing hand-rolled pieces using well-known frameworks. As of
+the 2026-10-25 revision above, the framework version **replaces** the
+hand-written one in V3 (V2 remains the hand-built baseline).
 
-- **LangChain core** — `OllamaEmbeddings` (Ollama runs local models)/`GoogleGenerativeAIEmbeddings`
+- **LangChain core** — `GoogleGenerativeAIEmbeddings`
   (Google `gemini-embedding-001`, the text → vector embedding model)
   + `QdrantVectorStore` (Qdrant is the vector DB) + `retriever.invoke()` vs. our
-  `embeddings.py`/`retrieve.py`; `ChatOllama`/`ChatOpenAI` vs. our
+  `embeddings.py`/`retrieve.py`; `ChatOpenAI` (pointed at OpenRouter) vs. our
   provider-swap logic in `app/llm`; `ChatPromptTemplate` vs. manual
   f-string prompts; `bind_tools()`/`create_tool_calling_agent()` vs.
   our hand-rolled Stage 9 MCP fenced-text protocol.
@@ -78,9 +143,10 @@ and uses current industry-standard agent tooling:
   for orchestration, plus tracing/evals (e.g. LangSmith or an open
   alternative), choosing the latest stable versions and justifying any
   exception (see "Tooling decisions").
-- Consider a richer domain with more tools and data (see "Future domain
-  expansion considerations"); the current ~7-company, ~16-interaction CRM seed and one write tool
-  limit how realistic a 5-agent system can be.
+- Consider a richer domain with more tools and data: the revision at the top
+  adds three CRM modules (tickets, contracts/renewals, meeting/email notes).
+  The V2 seed is ~7 companies and ~16 interactions with one write tool, which
+  limits how realistic a 5-agent system can be.
 - Keep every write behind human confirmation and the Stage 8 guardrails.
 
 ## Tooling decisions
