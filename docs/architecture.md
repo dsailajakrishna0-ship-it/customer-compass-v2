@@ -25,6 +25,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 │  /api/v1/chat*       — general / RAG / CRM / tools chat       │
 │  /api/v1/llm/models  — OpenRouter free/paid model catalog     │
 │  /api/v1/tasks, /api/v1/tool-audit-log — Stage 9 tool output  │
+│  /api/v1/agent/recommend, /confirm — Stage 10 agent workflow  │
 │                                                               │
 │  app/db.py        — Postgres connection pool (asyncpg)        │
 │  app/rag/         — chunking, embeddings, Qdrant client        │
@@ -34,6 +35,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 │                      ollama.py, types.py (GenerationResult)    │
 │  app/guardrails/  — prompt_guard.py, audit.py, llm_guard.py (Stage 8)  │
 │  app/mcp/         — server.py/tools.py/client.py (Stage 9)    │
+│  app/agent/       — workflow, agents, trace, policies (Stage 10)│
 └───────┬───────────────────┬───────────────────┬───────────────┘
         │                   │                   │
         ▼                   ▼                   ▼
@@ -53,7 +55,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 
 ## Stage-by-stage: what's new at each layer
 
-A per-stage comparison, from Stage 1 through the planned Stage 10. **Bold** = introduced at that stage; everything else in a row
+A per-stage comparison, from Stage 1 through Stage 10. **Bold** = introduced at that stage; everything else in a row
 is reused unchanged from an earlier stage. Read top to bottom to see the
 architecture diagram above build up incrementally. Full prose write-up per
 stage: [tech-stack.md](tech-stack.md).
@@ -69,7 +71,7 @@ stage: [tech-stack.md](tech-stack.md).
 | **7 — Production Concerns** | **Cross-provider auto-fallback** (retry once on the other provider), **per-request `usage` telemetry** | A failing provider no longer surfaces a hard error — it silently retries on the other provider and *tells you it did* (fallback flag + cost/latency footer in UI) | Stage 4 dual providers |
 | **8 — Prompt-Injection Guardrails** | **Rule-based input/document guard** (the prompt guard, a text scan for injection phrases), `<untrusted_context>` delimiting, `guardrail` field on every response | Injection attempts (direct or planted in a document) are neutralized in place and surfaced visibly, instead of silently succeeding or blocking the whole request | Stage 3 document ingestion, Stage 5 CRM chat, Stage 7 visibility pattern |
 | **9 — Tool Calling (MCP)** | **MCP server/client** (`app/mcp/`; MCP is a protocol that exposes tools to the model), fenced-text tool-call protocol, `/api/v1/chat/tools`, **`tasks`**/**`tool_audit_log`** (records every tool call) tables | Model can call live tools **mid-conversation** (read CRM/docs, propose+confirm a mutating action) instead of everything being stuffed into the prompt upfront | Stage 1 DB, Stage 3 retrieval, Stage 5 CRM queries, Stage 8 guardrail (applied to tool results too) |
-| **10 — Agentic Assistant** | *(planned, not yet built — see [part-4-autonomy-protocols/10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md))* — a bounded multi-step workflow, inspectable execution trace, broader approval surface | Model pursues a **multi-step goal** autonomously (e.g. "follow up with every stalled deal this week"), not just one reactive tool call per turn | Stage 9 tools, Stage 8 guardrails |
+| **10 — Agentic Assistant** | **`app/agent/`** (3 agents: Analyst, Reviewer, Task Drafter; orchestration is plain code), `POST /api/v1/agent/recommend` and `/agent/confirm`, an inspectable trace, the "Account follow-up agent" chat mode — see [part-4-autonomy-protocols/10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md) | A bounded multi-step review (max 8 steps, 180 s) that ends in a confirmation gate; only `/agent/confirm` can create a task. Which pattern to use when: [agent-boundaries.md](agent-boundaries.md) | Stage 9 tools, Stage 8 guardrails, Stage 5 CRM queries |
 
 ## Why two databases
 

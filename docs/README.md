@@ -40,7 +40,7 @@ disrupting earlier ones.
 | Stage | Status | Document |
 | --- | --- | --- |
 | 9. Tool calling via MCP | Complete | [09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md) |
-| 10. Agentic CRM assistant | Planned | [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md) |
+| 10. Agentic CRM assistant (Account Follow-up Recommender) | Complete | [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md) |
 
 ## Baseline stack
 
@@ -88,7 +88,8 @@ See [testing-guide.md](testing-guide.md) for the single "how do I actually
 try this" doc: commands to start everything, URLs to open/monitor, every
 chat-mode × provider dropdown combination with sample questions and
 expected results, and quick curl-only checks for isolating UI vs. backend
-bugs.
+bugs. For a guided path through all ten stages in an Ask / Observe / Learn
+pattern, see [v2-testing-walkthrough.md](v2-testing-walkthrough.md).
 
 ## Usage guide & troubleshooting
 

@@ -79,7 +79,7 @@ and uses current industry-standard agent tooling:
   alternative), choosing the latest stable versions and justifying any
   exception (see "Tooling decisions").
 - Consider a richer domain with more tools and data (see "Future domain
-  expansion considerations"); the current 3-company CRM and one write tool
+  expansion considerations"); the current ~7-company, ~16-interaction CRM seed and one write tool
   limit how realistic a 5-agent system can be.
 - Keep every write behind human confirmation and the Stage 8 guardrails.
 

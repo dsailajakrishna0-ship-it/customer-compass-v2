@@ -219,6 +219,35 @@ to `tasks`. See
 [part-4-autonomy-protocols/09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md)
 for the full design and manual test steps.
 
+## `POST /api/v1/agent/recommend`
+
+Stage 10: runs the Account Follow-up Recommender (Analyst, Reviewer and Task
+Drafter agents; plain-code orchestration). **Never writes.** Takes 1–2 minutes
+with the local model.
+
+**Request:** `{ "message": "Analyze Acme Fabrication account and recommend a next action", "provider": "ollama", "model": null }` (`provider` and `model` optional).
+
+**Response 200** — simple questions return `{ "route": "direct", "message": "..." }`. Otherwise:
+```json
+{
+  "route": "agent",
+  "status": "completed",
+  "company": { "id": 1, "name": "Acme Fabrication" },
+  "trace": [{ "index": 1, "kind": "tool", "name": "get_company_summary", "input_summary": "...", "output_summary": "...", "status": "ok", "duration_ms": 12 }],
+  "evidence": [{ "label": "E1", "source": "...", "text": "..." }],
+  "recommendation": { "action": "...", "rationale": "...", "evidence": ["E3", "E6"] },
+  "review": { "approved": true, "verdict": "approve", "reasons": [], "revisions": 0 },
+  "proposedTask": { "companyName": "Acme Fabrication", "note": "..." },
+  "guardrail": { "flagged": false, "reasons": [] },
+  "llmCalls": 3
+}
+```
+`status` is one of `completed`, `company_not_found`, `budget_exceeded`, `timed_out` (the last three return a `message` and a partial `trace`). Limits: `AGENT_MAX_STEPS` (8), `AGENT_TIMEOUT_SECONDS` (180), `AGENT_MAX_REVISIONS` (1).
+
+## `POST /api/v1/agent/confirm`
+
+Stage 10: the only agent write path. **Request:** `{ "companyName": "Acme Fabrication", "note": "...", "confirm": true }`. `confirm: false` records a decline and creates nothing. `confirm: true` creates the task through the Stage 9 tool (audited in `tool_audit_log`); `404` if the company is not found. See [part-4-autonomy-protocols/10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md).
+
 ### `GET /api/v1/security-audit-log` (Stage 8.c)
 
 Returns recorded guardrail detections, newest first. Query params: `limit`

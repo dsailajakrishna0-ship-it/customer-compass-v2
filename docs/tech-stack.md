@@ -161,10 +161,12 @@ information, organized the other way (by technology, not by stage).
   table (it records every MCP tool call), readable via `GET /api/v1/tool-audit-log`; confirmed tasks land in
   a new `tasks` table, readable via `GET /api/v1/tasks`.
 
-![Stage 10](https://img.shields.io/badge/Stage_10-Agentic_Assistant-lightgrey) **— planned**
-- Not yet built; see
-  [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md)
-  for the intended design.
+![Stage 10](https://img.shields.io/badge/Stage_10-Agentic_Assistant-brightgreen) **— done**
+- Account Follow-up Recommender: 3 agents (Analyst, Reviewer, Task Drafter)
+  with plain-code orchestration, a step/time budget (8 steps, 180 s), an
+  inspectable trace and a confirmation gate (`/api/v1/agent/recommend`,
+  `/api/v1/agent/confirm`). See
+  [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md).
 
 
 ## LLM inference (chat/completion)
