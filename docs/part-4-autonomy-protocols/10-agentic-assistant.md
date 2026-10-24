@@ -92,7 +92,8 @@ Mode: **Account follow-up agent**, provider Local. A run takes 1–2 minutes.
 ## Limits of this stage (honest)
 
 - Recommendation quality was only spot-checked on the local 3B model; there is no evaluation set yet.
-- Injection hidden in stored CRM or document text is unit-tested, not live-tested. `GUARD_MODE=both` and cloud providers were not tried.
+- Injection hidden in stored CRM or document text is unit-tested, not live-tested. `GUARD_MODE=both` was not tried.
+- Cloud provider: the maintainer manually ran the agent with provider Cloud (OpenRouter free tier, model "Dots Studio: Dots3-Note Preview (free)") and it completed. This was a manual check; no timings or outputs were recorded, and free models change often.
 - No long-term memory (each run starts fresh), no parallel agents, no agent-chosen tools, no multi-agent framework. These are V3 Track C topics.
 
 ## Developer note
