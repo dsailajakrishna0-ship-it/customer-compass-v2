@@ -40,7 +40,7 @@ disrupting earlier ones.
 | Stage | Status | Document |
 | --- | --- | --- |
 | 9. Tool calling via MCP | Complete | [09-tool-calling-mcp.md](part-4-autonomy-protocols/09-tool-calling-mcp.md) |
-| 10. Agentic CRM assistant | Planned | [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md) |
+| 10. Agentic CRM assistant (Account Follow-up Recommender) | Complete | [10-agentic-assistant.md](part-4-autonomy-protocols/10-agentic-assistant.md) |
 
 ## Baseline stack
 

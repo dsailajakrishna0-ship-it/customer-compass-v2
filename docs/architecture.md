@@ -25,6 +25,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 │  /api/v1/chat*       — general / RAG / CRM / tools chat       │
 │  /api/v1/llm/models  — OpenRouter free/paid model catalog     │
 │  /api/v1/tasks, /api/v1/tool-audit-log — Stage 9 tool output  │
+│  /api/v1/agent/recommend, /confirm — Stage 10 agent workflow  │
 │                                                               │
 │  app/db.py        — Postgres connection pool (asyncpg)        │
 │  app/rag/         — chunking, embeddings, Qdrant client        │
@@ -34,6 +35,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 │                      ollama.py, types.py (GenerationResult)    │
 │  app/guardrails/  — prompt_guard.py, audit.py, llm_guard.py (Stage 8)  │
 │  app/mcp/         — server.py/tools.py/client.py (Stage 9)    │
+│  app/agent/       — workflow, agents, trace, policies (Stage 10)│
 └───────┬───────────────────┬───────────────────┬───────────────┘
         │                   │                   │
         ▼                   ▼                   ▼
@@ -53,7 +55,7 @@ For the per-stage build history, see [tech-stack.md](tech-stack.md) and the
 
 ## Stage-by-stage: what's new at each layer
 
-A per-stage comparison, from Stage 1 through the planned Stage 10. **Bold** = introduced at that stage; everything else in a row
+A per-stage comparison, from Stage 1 through Stage 10. **Bold** = introduced at that stage; everything else in a row
 is reused unchanged from an earlier stage. Read top to bottom to see the
 architecture diagram above build up incrementally. Full prose write-up per
 stage: [tech-stack.md](tech-stack.md).
