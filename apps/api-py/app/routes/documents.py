@@ -4,9 +4,29 @@ from fastapi import APIRouter, HTTPException
 
 from app.db import get_pool
 from app.rag.ingest import ingest_documents
-from app.rag.qdrant_store import count_chunks
+from app.rag.qdrant_store import COLLECTION_NAME, count_chunks
+from app.rag.retrieve import (
+    VECTOR_HNSW_EF,
+    VECTOR_INDEX_MIN_POINTS,
+    choose_search_strategy,
+    get_point_count,
+)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+# Stage 3.a: shows which search path retrieval will use for the current collection size
+@router.get("/vector-search-info")
+async def vector_search_info():
+    points = await get_point_count()
+    strategy, _ = choose_search_strategy(points)
+    return {
+        "collection": COLLECTION_NAME,
+        "points": points,
+        "strategy": strategy,
+        "minPointsForHnsw": VECTOR_INDEX_MIN_POINTS,
+        "hnswEf": VECTOR_HNSW_EF,
+    }
 
 
 # Ingestion: chunks sample docs, embeds them (Google) and stores vectors in Qdrant, metadata in Postgres
