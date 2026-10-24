@@ -1,7 +1,7 @@
 # Stage 8 — Prompt-injection defense and guardrails
 
 **Part:** III — Trust & Safety
-**Status:** Done (base guard) + 8.a–8.d extensions
+**Status:** Done (base guard) + 8.a–8.e extensions
 
 ## Goal
 
@@ -28,7 +28,7 @@ process as Stage 7):
    to the person testing it.
 
 This is a **narrower, more concrete** version of the original Stage 8 plan
-(see "Extensions: Stages 8.a–8.d" below for what was added afterwards).
+(see "Extensions: Stages 8.a–8.e" below for what was added afterwards).
 
 ## Threat model
 
@@ -169,7 +169,7 @@ Files from this increment:
 - `apps/web/src/hooks/useChat.ts` — passes `guardrail` through.
 - `apps/web/src/components/chat/MessageBubble.tsx` — `GuardrailWarning` tag.
 
-## Extensions: Stages 8.a–8.d
+## Extensions: Stages 8.a–8.e
 
 The original, broader Stage 8 plan was split into four sub-stages, all built
 on top of the base guard above.
@@ -241,3 +241,23 @@ comparison remains open.
 Trade-off to expect: the classifier adds one extra LLM call (latency/cost)
 per request and can false-positive; the rules are free and instant but
 brittle.
+
+### 8.e — Guardrail coverage map
+
+Where each of the seven guardrail layers stands today. This is a map of
+current coverage and known gaps (from reading the code, not a new measurement);
+closing gaps becomes later sub-stages (8.f onwards), added on demand.
+
+| Layer | Covered | Known gaps |
+| --- | --- | --- |
+| **Input** | Regex scan + in-place redaction of the user message on all four chat routes (Stage 8). Optional LLM classifier, `GUARD_MODE=llm` or `both` (8.d). | Rules only by default. No PII detection, message-length limit or rate limiting. |
+| **Adversarial** | 19-prompt fixture + promptfoo suite (8.a). | Rules miss 5 of 15 attacks (paraphrase, leetspeak). Set is small: no multi-turn, encoded or non-English attacks. Classifier recall not yet measured. |
+| **Retrieval** | Retrieved chunks scanned and neutralized, wrapped in `<untrusted_context>`. `/chat/crm` retrieval is filtered to the named company. | Documents are scanned at query time, not at ingestion. `/chat/rag` has no company scoping. Citations show the original, unredacted text. |
+| **Output** | 8.b scans answers for system-prompt leaks, jailbreak compliance and (CRM route, company scoped) other customers' names. | Narrow patterns. Cross-customer check runs only on `/chat/crm` with a scoped company. No groundedness/hallucination check, no PII redaction. |
+| **Action** | Stage 9: the `confirm` flag is set by the route from the user's latest raw message, never by the model; company must resolve to a real company; at most `MAX_TOOL_ITERATIONS` (4) tool calls per turn; tool results are scanned; every call is recorded in `tool_audit_log`. | The model-written task `note` is stored without a guardrail scan. Only one write tool, so no per-tool permissions or per-session action caps. Stage 10's multi-step workflows will need these. |
+| **Grounding** | `/chat/rag` and `/chat/crm` prompts require answers from the supplied context with `[n]` citations. Retrieval drops chunks below `MIN_SIMILARITY` (0.45), and an empty result returns a fixed "could not find" message with no LLM call. CRM facts come from SQL, not the model. Stage 6 promptfoo suite checks correct sources, company isolation and declining. | No runtime groundedness check: nothing verifies the answer or its `[n]` markers against the cited chunks. `/chat` (general) and `/chat/tools` are not grounded by design. Grounding quality is only measured offline, on a small question set. |
+| **Monitoring** | `llm_usage` log line per answer (provider, model, tokens, latency, cost, fallback). `prompt_guard_flagged` warnings. `security_audit_log` (8.c) and `tool_audit_log` (9) tables with read endpoints. Visible UI tag on flagged answers and fallbacks. | No dashboards, metrics aggregation or alerting (e.g. on a spike of flagged requests). App logs have no retention policy (only the audit table does). Grounding and guardrail results are not tracked over time. |
+
+Sub-stages 8.f onwards (none started): ingestion-time document scanning,
+scoping `/chat/rag`, scanning tool-call arguments before writes, a larger
+adversarial set, measuring the classifier, a runtime groundedness check and basic alerting on flagged-request spikes.
