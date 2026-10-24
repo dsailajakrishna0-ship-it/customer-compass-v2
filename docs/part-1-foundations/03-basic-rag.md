@@ -324,6 +324,34 @@ support conversations, and two product/service overviews, cross-referenced
 with the three companies already in the CRM database — this sets up Stage 5's
 DB + RAG linkage.
 
+## Stage 3.a: scale-aware search (exact below a threshold, HNSW above)
+
+`app/rag/retrieve.py` counts the points in the collection (cached for 60 s)
+and picks the search path:
+
+- fewer than `VECTOR_INDEX_MIN_POINTS` (default 10,000): `exact=True`, every
+  vector is compared, so the result is always correct;
+- at or above it: `hnsw_ef=VECTOR_HNSW_EF` (default 64), the approximate path.
+
+Each query logs `vector_search strategy=exact|hnsw`, and
+`GET /api/v1/documents/vector-search-info` shows the current choice.
+Qdrant switches in a similar way internally; this makes the choice visible.
+The 16-document sample corpus always takes the exact path.
+
+To watch it switch, seed a separate fake collection (random vectors, so
+answers are meaningless; only the path is real):
+
+```bash
+cd apps/api-py
+uv run python ../../scripts/seed_fake_chunks.py --count 20000
+# restart the API with QDRANT_COLLECTION=document_chunks_demo, then:
+curl http://localhost:8001/api/v1/documents/vector-search-info
+uv run python ../../scripts/seed_fake_chunks.py --clean
+```
+
+Limits: the 10,000 threshold and `ef=64` are starting points. On real data,
+measure recall on your own questions before trusting them.
+
 ## Learning boundaries
 
 - Explain and implement chunk size, overlap, embeddings, similarity scoring,
