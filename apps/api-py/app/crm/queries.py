@@ -55,6 +55,39 @@ async def get_open_deals(company_id: int) -> list[DealFact]:
 
 
 @dataclass
+class InteractionFact:
+    id: int
+    interaction_type: str
+    subject: str
+    occurred_at: str
+    summary: str
+
+
+# Recent interactions (emails, calls, meetings, support): the "history" evidence for the Stage 10 agent
+async def get_recent_interactions(company_id: int, limit: int = 5) -> list[InteractionFact]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT id, interaction_type, subject, occurred_at::text AS occurred_at, summary
+           FROM interactions
+           WHERE company_id = $1
+           ORDER BY occurred_at DESC
+           LIMIT $2""",
+        company_id,
+        limit,
+    )
+    return [
+        InteractionFact(
+            id=row["id"],
+            interaction_type=row["interaction_type"],
+            subject=row["subject"],
+            occurred_at=row["occurred_at"],
+            summary=row["summary"],
+        )
+        for row in rows
+    ]
+
+
+@dataclass
 class CompanySummary:
     id: int
     name: str

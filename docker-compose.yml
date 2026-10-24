@@ -76,6 +76,9 @@ services:
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-document_chunks}  # Stage 3.a: set to document_chunks_demo to try fake data
       VECTOR_INDEX_MIN_POINTS: ${VECTOR_INDEX_MIN_POINTS:-10000}
       VECTOR_HNSW_EF: ${VECTOR_HNSW_EF:-64}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-8}  # Stage 10: step limit per agent run
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-180}
+      AGENT_MAX_REVISIONS: ${AGENT_MAX_REVISIONS:-1}
     volumes:
       - ./sample-data:/sample-data:ro
     ports:
