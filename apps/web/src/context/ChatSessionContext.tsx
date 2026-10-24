@@ -69,7 +69,7 @@ const ChatSessionContext = createContext<ChatSessionValue | null>(null);
 
 const INITIAL_MESSAGE: ChatMessage = {
   role: "assistant",
-  content: "Hello — I’m Compass. At this stage I can chat, but I do not yet have access to CRM data.",
+  content: "Hello — I’m Compass. Pick a chat mode above. General mode has no access to CRM data; the other modes use documents, CRM facts, tools or the follow-up agent.",
 };
 
 export function ChatSessionProvider({ children }: { children: ReactNode }) {

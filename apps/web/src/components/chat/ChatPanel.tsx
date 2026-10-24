@@ -29,9 +29,9 @@ export function ChatPanel({ ingestStatus, isIngesting, onIngest }: ChatPanelProp
   return (
     <section className="chat-panel">
       <div>
-        <p className="eyebrow">Stage 5 · Realistic CRM RAG</p>
+        <p className="eyebrow">Chat · Stages 2–10</p>
         <h2>Ask Compass</h2>
-        <p>Choose a chat mode: general knowledge, document-grounded answers, or the CRM copilot that combines verified database facts with cited documents.</p>
+        <p>Choose a chat mode: general knowledge, document-grounded answers, the CRM copilot, the tool-calling copilot, or the account follow-up agent.</p>
         <ChatModeSelector
           chatMode={chatMode}
           onChangeMode={(mode: ChatMode) => switchChatMode(mode)}

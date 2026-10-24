@@ -417,6 +417,7 @@ curl -s -X POST http://localhost:8001/api/v1/agent/confirm \
 ```
 
 Set `AGENT_TIMEOUT_SECONDS=20` and restart `api-py` to see a clean `timed_out`.
+The agent also works with provider **Cloud** (pick a free OpenRouter model in the second dropdown); timing on cloud models was not measured.
 Confirming creates a real task in the dev DB. Design: `docs/part-4-autonomy-protocols/10-agentic-assistant.md`; pattern choice: `docs/agent-boundaries.md`.
 
 ### Provider/model notes (apply to every combo above)
