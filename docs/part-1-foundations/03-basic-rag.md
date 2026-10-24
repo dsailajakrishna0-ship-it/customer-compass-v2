@@ -116,9 +116,52 @@ dimension) cuts memory further at some accuracy cost. A **payload index**
 company-scoped queries use.
 
 **Our setup:** the Qdrant collection in `app/rag/qdrant_store.py` sets only
-the size (768) and cosine distance, so it uses Qdrant's **default HNSW**
-parameters, with no quantization and no payload index. With 16 documents an
-index makes no visible difference; it matters at far larger scale.
+the size (768) and cosine distance, so Qdrant applies its **default HNSW
+settings** (`m=16`, `ef_construct=100`), with no quantization and no payload
+index. We write no index code or tuning ourselves; the only index
+configuration in this repo is in `evals/vector_index_demo.py`.
+
+Caveat: Qdrant only builds the HNSW graph once a segment holds enough vector
+data (`indexing_threshold`, 10,000 KB by default in the version we checked,
+roughly 3,000 vectors of 768 floats), and uses a plain scan for filtered
+queries that match few points (`full_scan_threshold`). With 16 documents our
+searches are therefore effectively **exact**, not approximate. The index only
+starts to matter as the corpus grows. IVF is not used anywhere in this repo
+(the old pgvector setup had no index either).
+
+### How the index works and how it decides
+
+**HNSW** is a layered graph. Each vector is a node linked to its near
+neighbours; upper layers are sparse "highways" and the bottom layer holds every
+point.
+
+- *Build (`m`, `ef_construct`).* Each new vector enters at a random layer, finds
+  its nearest neighbours with a search of width `ef_construct`, and links to up
+  to `m` of them. Bigger values give a better graph but slower, larger builds.
+- *Search (`hnsw_ef`).* Start at the top layer, greedily hop to whichever
+  neighbour is closer to the query, drop a layer, and repeat. On the bottom
+  layer keep the `ef` best candidates and return the top `k`. The search stops
+  when no candidate improves, which is why it can miss a true neighbour
+  (recall below 1.00) and why a larger `ef` helps.
+- *Who decides.* Qdrant, not our code. It decides when to build (the thresholds
+  above), builds in the background, and picks between graph search and a plain
+  scan per query. We only choose settings, if we choose any.
+
+**IVF (inverted file)** works differently, and Qdrant does not offer it (it is
+found in FAISS and pgvector's `ivfflat`).
+
+- *Build.* Run k-means over the vectors to make `nlist` cluster centres, then
+  assign every vector to its nearest centre.
+- *Search.* Compare the query with the centres, then scan only the `nprobe`
+  nearest clusters. More probes means higher recall and more work.
+- *Trade-off.* It needs the data present to train the clusters, and when new
+  data drifts the clusters go stale and need a rebuild. HNSW inserts one point at
+  a time without retraining but uses more memory.
+
+**How to choose:** for small data, use no index (exact scan). For general
+semantic search with updates, use HNSW. When memory is the limit or data is huge
+and mostly static, consider IVF, often with product quantization. Tune by
+measuring recall@k and latency on your own questions.
 
 **Demo:** `evals/vector_index_demo.py` (needs a real Qdrant server; usage is
 in the file's docstring). Run it from the branch/checkout that contains the
