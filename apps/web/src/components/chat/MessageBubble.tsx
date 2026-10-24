@@ -1,6 +1,7 @@
 import type { ChatMessage } from "../../types";
 import { CrmFactsPanel } from "./CrmFactsPanel";
 import { CitationList } from "./CitationList";
+import { AgentRunPanel } from "./AgentRunPanel";
 
 /** Stage 7: renders the per-answer telemetry footer (provider/model, tokens,
  * latency, estimated cost) plus a visible note when automatic cross-provider
@@ -54,7 +55,7 @@ function ToolsUsedTrail({ toolsUsed }: { toolsUsed: NonNullable<ChatMessage["too
 export function MessageBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`message ${message.role}`}>
-      <p>{message.content}</p>
+      {message.agentRun ? <AgentRunPanel run={message.agentRun} /> : <p>{message.content}</p>}
       {message.role === "assistant" && message.provider && (
         <p className="provider-tag">via {message.provider === "cloud" ? "Cloud (OpenRouter)" : "Local (Ollama)"}</p>
       )}

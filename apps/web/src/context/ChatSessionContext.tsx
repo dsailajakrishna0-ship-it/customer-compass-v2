@@ -46,6 +46,11 @@ export const MODE_COPY: Record<ChatMode, { label: string; placeholder: string; s
     placeholder: "Ask me to look up deals, search documents, or propose a follow-up task…",
     switchNotice: "Switched to tool-calling mode. I can call live tools (company summary, open deals, document search, follow-up tasks) via MCP instead of relying only on context stuffed into the prompt.",
   },
+  agent: {
+    label: "Account follow-up agent",
+    placeholder: "e.g. Analyze Acme Fabrication's account and recommend a next action",
+    switchNotice: "Switched to the account follow-up agent. Ask me to analyze a company: an Analyst agent recommends, a Reviewer agent checks it, a Task Drafter agent drafts a task, and nothing is created until you confirm. A run can take 1–2 minutes on the local model.",
+  },
 };
 
 type ChatSessionValue = {

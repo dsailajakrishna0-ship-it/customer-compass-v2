@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { sendChat } from "../api/chat";
+import { recommendForAccount, sendChat } from "../api/chat";
 import { useChatSession } from "../context/ChatSessionContext";
 import type { ChatMessage, LlmProvider } from "../types";
 
@@ -29,6 +29,25 @@ export function useChat(): {
     };
     // Only cloud requests carry a model id; the local provider uses the server's Ollama model
     if (provider === "cloud" && cloudModel) requestBody.model = cloudModel;
+
+    // Stage 10: agent mode runs the bounded workflow instead of a single chat call
+    if (chatMode === "agent") {
+      recommendForAccount({ message: text, provider, model: requestBody.model })
+        .then((run) => {
+          setMessages((current) => [
+            ...current,
+            { role: "assistant", content: run.route === "direct" ? (run.message ?? "") : "", agentRun: run },
+          ]);
+        })
+        .catch(() => {
+          setMessages((current) => [
+            ...current,
+            { role: "assistant", content: "I could not reach the API. Check that the local services are running." },
+          ]);
+        })
+        .finally(() => setIsAsking(false));
+      return;
+    }
 
     sendChat(chatMode, requestBody)
       .then((body) => {

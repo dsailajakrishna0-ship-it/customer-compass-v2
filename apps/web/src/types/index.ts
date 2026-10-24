@@ -75,8 +75,33 @@ export type CrmFact = {
 export type LlmProvider = "ollama" | "cloud";
 
 /** "general" = Stage 2 plain chat, "rag" = Stage 3 document-grounded chat, "crm" = Stage 5 facts + citations,
- * "tools" = Stage 9 MCP tool-calling copilot. */
-export type ChatMode = "general" | "rag" | "crm" | "tools";
+ * "tools" = Stage 9 MCP tool-calling copilot, "agent" = Stage 10 account follow-up agent workflow. */
+export type ChatMode = "general" | "rag" | "crm" | "tools" | "agent";
+
+/** Stage 10: one step of an agent run's trace (a code step, tool call, or agent call). */
+export type AgentTraceStep = {
+  index: number;
+  kind: "code" | "tool" | "agent" | "gate";
+  name: string;
+  input_summary: string;
+  output_summary: string;
+  status: "ok" | "error" | "skipped";
+  duration_ms: number;
+};
+
+/** Stage 10: response of POST /api/v1/agent/recommend. `route: "direct"` means a simple question that should use a normal chat mode. */
+export type AgentRun = {
+  route: "agent" | "direct";
+  status?: "completed" | "company_not_found" | "timed_out" | "budget_exceeded";
+  message?: string;
+  trace?: AgentTraceStep[];
+  company?: { id: number; name: string };
+  evidence?: { label: string; source: string; text: string }[];
+  recommendation?: { action: string; rationale: string; evidence: string[] };
+  review?: { approved: boolean; verdict: string; reasons: string[]; revisions: number };
+  proposedTask?: { companyName: string; note: string };
+  guardrail?: ChatGuardrail;
+};
 
 /** Stage 7: per-request telemetry (which provider/model actually answered,
  * token counts, latency, a rough cost estimate, and whether automatic
@@ -112,6 +137,7 @@ export type ChatMessage = {
   usage?: ChatUsage;
   guardrail?: ChatGuardrail;
   toolsUsed?: ToolCallSummary[];
+  agentRun?: AgentRun;
 };
 
 export type ModelOption = { id: string; name: string };
