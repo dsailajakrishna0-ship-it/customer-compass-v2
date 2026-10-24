@@ -63,7 +63,9 @@ commands are in section 1; stage-specific steps are in the linked docs.
 | `http://localhost:5173` | The web app itself (React UI). | `cd apps/web && npm run dev` |
 | `http://localhost:8001/health` | Backend health check: API is up and can reach Postgres. | `api-py` container |
 | `http://localhost:8001/docs` | Live interactive Swagger UI for every API endpoint; try requests without the frontend. | `api-py` container |
-| `http://localhost:6333/dashboard` | Qdrant's built-in web UI: inspect the `document_chunks` collection, point counts, payloads (Stage 3). | `qdrant` container |
+| `http://localhost:6333/dashboard` | Qdrant's built-in web UI: inspect the `document_chunks` collection, point counts, payloads, HNSW settings and `indexed_vectors_count` (Stage 3). Port 6333 is the app's Qdrant; the demo Qdrant is on 6335 (see below). If 6333 does not open, the main stack is not running. | `qdrant` container |
+| `http://localhost:6333/collections/document_chunks` | Same collection info as JSON (points count, indexed vectors, segments, config). | `qdrant` container |
+| `http://localhost:6333/metrics` | Qdrant Prometheus metrics (chartable in Grafana). | `qdrant` container |
 | `http://localhost:11435/api/tags` | Ollama (local generating model): lists pulled models, confirms it is up. Host port 11435 maps to 11434 in the container. | `ollama` container |
 | `localhost:5432` (not a browser URL) | Postgres. Use `docker exec -it customer-compass-v2-db psql -U customer_compass -d customer_compass`, or a DB client (see the Stage 3 doc). | `db` container |
 | `docker compose logs -f api-py` | Backend request/error logs, including the `llm_usage` line (Stage 7) and `prompt_guard_flagged` warnings (Stage 8). | any time |
@@ -75,6 +77,7 @@ commands are in section 1; stage-specific steps are in the linked docs.
 | --- | --- | --- |
 | `GET /companies`, `GET /companies/{id}` | 5 | CRM companies and one company's detail. |
 | `GET /documents`, `GET /documents/ingestion-runs` | 3 | Ingested documents and ingestion history. `POST /documents/ingest` loads the sample data. |
+| `GET /documents/vector-search-info` | 3.a | Point count and which search path (exact or HNSW) the app uses now. Qdrant's dashboard does not show this. |
 | `GET /llm/models` | 7 | Cloud (OpenRouter) models the UI dropdown offers. |
 | `POST /chat`, `/chat/rag`, `/chat/crm`, `/chat/tools` | 2, 3, 5, 9 | The four chat modes; every response includes `guardrail` (Stage 8). |
 | `GET /tasks` | 9 | Follow-up tasks created by the tool-calling copilot. |
