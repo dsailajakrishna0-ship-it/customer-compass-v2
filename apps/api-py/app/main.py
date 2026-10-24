@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from app.db import close_pool, get_pool
 from app.guardrails.audit import ensure_schema_and_purge
 from app.rag.qdrant_store import close_client
+from app.routes.agent import router as agent_router
 from app.routes.chat import router as chat_router
 from app.routes.companies import router as companies_router
 from app.routes.documents import router as documents_router
@@ -66,6 +67,7 @@ app.include_router(llm_router, prefix="/api/v1")
 app.include_router(companies_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(security_router, prefix="/api/v1")
+app.include_router(agent_router, prefix="/api/v1")
 
 
 @app.get("/health")
