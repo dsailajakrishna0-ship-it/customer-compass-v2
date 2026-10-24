@@ -60,6 +60,29 @@ replace the hand-rolled version permanently.
   space) — LlamaIndex, Haystack, as alternatives to LangChain for the
   retrieval piece.
 
+### Track C — Multi-agent Agentic AI (planned, builds on v2 Stage 10)
+
+v2 Stage 10 ships 3 agents (Analyst agent, Reviewer agent, Task Drafter
+agent) with code-controlled orchestration. V3 extends that to **5 agents**
+and uses current industry-standard agent tooling:
+
+| # | Agent | Role in v3 |
+| --- | --- | --- |
+| 1 | **Evidence Gatherer agent** | Chooses which CRM tools to call to collect facts (a fixed code step in v2). |
+| 2 | **Document Researcher agent** | Decides what to search in the document store and when it has enough (a fixed retrieval step in v2). |
+| 3 | **Analyst agent** | Reasons over the evidence and recommends an action (as in v2). |
+| 4 | **Reviewer agent** | Critiques the recommendation against the evidence (as in v2). |
+| 5 | **Task Drafter agent** | Drafts the follow-up task for human confirmation (as in v2). |
+
+- Use a current agent framework (LangGraph is already listed in Track B)
+  for orchestration, plus tracing/evals (e.g. LangSmith or an open
+  alternative), choosing the latest stable versions and justifying any
+  exception (see "Tooling decisions").
+- Consider a richer domain with more tools and data (see "Future domain
+  expansion considerations"); the current 3-company CRM and one write tool
+  limit how realistic a 5-agent system can be.
+- Keep every write behind human confirmation and the Stage 8 guardrails.
+
 ## Tooling decisions
 
 **Guiding rule:** prefer the latest, industry-standard tools, and write down a reason for any exception.
