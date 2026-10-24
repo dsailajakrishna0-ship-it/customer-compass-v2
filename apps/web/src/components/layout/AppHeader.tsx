@@ -2,9 +2,9 @@
 export function AppHeader() {
   return (
     <header>
-      <p className="eyebrow">STAGE 1 · CRM FOUNDATION</p>
+      <p className="eyebrow">CUSTOMER COMPASS · V2</p>
       <h1>Customer Compass</h1>
-      <p>A small CRM baseline for learning AI architecture.</p>
+      <p>A small CRM for learning AI architecture, from basic chat to a tool-using agent.</p>
     </header>
   );
 }
