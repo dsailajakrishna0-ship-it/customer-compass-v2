@@ -292,7 +292,7 @@ deterministically.
 ```bash
 cd apps/api-py
 PYTHONPATH=. uv run python ../../evals/compare_guards.py          # rules only: recall 10/15, 0 false positives
-PYTHONPATH=. uv run python ../../evals/compare_guards.py --llm    # adds llm and both modes
+PYTHONPATH=. uv run python ../../evals/compare_guards.py --llm    # adds llm and both modes (live run: llm 15/15, both 15/15, 0 false positives)
 ```
 
 To use it in the app, set `GUARD_MODE=both` in `.env`, then
