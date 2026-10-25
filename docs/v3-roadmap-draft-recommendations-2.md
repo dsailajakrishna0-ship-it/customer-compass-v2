@@ -412,6 +412,92 @@ Principle: one tool per job, chosen for being widely used in industry jobs, and 
 | T17 | Frontend | **TanStack Query** for server state, **React Hook Form + Zod** for the new company form, **shadcn/ui** (Radix) for components, **Playwright** for end-to-end; **Vercel AI SDK** or **assistant-ui** (both open source) only if you adopt streaming chat | MIT | hand-written fetch hooks, `useChat.ts` | Adopt only for the features that need them (forms, streaming); do not rewrite working components. |
 | T18 | Structured business tools | Optional: **Pydantic AI** or **OpenAI Agents SDK** as a one-day comparison against the LangGraph node | MIT | none | The roadmap already allows this "if there is a specific reason". A written comparison is a good learning artifact. |
 
+### Diagrams (Mermaid)
+
+These render on GitHub and in the VS Code Markdown preview. Colours: grey = V2 (existing), blue = replaced by an existing roadmap decision, **green = new in Recommendations-2**.
+
+**A. What V3 replaces (V2 → V3)**
+
+```mermaid
+flowchart LR
+    subgraph V2["V2 - hand-written"]
+        a1["Plain-code workflow"]
+        a2["Fenced-text tool calls<br/>stdio subprocess per turn"]
+        a3["provider.py<br/>2-provider fallback"]
+        a4["Hand-parsed JSON"]
+        a5["Fixed top_k + MIN_SIMILARITY"]
+        a6["Log lines + audit table"]
+        a7["init.sql only"]
+    end
+    subgraph V3["V3 - framework / standard tool"]
+        b1["LangGraph<br/>+ interrupt before write"]
+        b2["Native tool calling<br/>+ FastMCP over HTTP"]
+        b3["LiteLLM<br/>ordered free-model list"]
+        b4["Pydantic<br/>structured output"]
+        b5["Hybrid search + reranker"]
+        b6["Langfuse + OpenTelemetry<br/>(audit table stays)"]
+        b7["Alembic migrations"]
+    end
+    a1 --> b1
+    a2 --> b2
+    a3 --> b3
+    a4 --> b4
+    a5 --> b5
+    a6 --> b6
+    a7 --> b7
+    classDef old fill:#eceff1,stroke:#607d8b,color:#263238
+    classDef dec fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    classDef rec fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    class a1,a2,a3,a4,a5,a6,a7 old
+    class b1,b2,b4,b6 dec
+    class b3,b5,b7 rec
+```
+
+**B. RAG: what actually happens, and where V3 changes it**
+
+```mermaid
+flowchart LR
+    Q["01 User query"] --> G["02 Guard<br/>Stage 8 rules"]
+    G --> E["03 Embed<br/>Gemini or FastEmbed"]
+    E --> V["04 Qdrant<br/>dense + BM25 hybrid"]
+    V --> K["05 Top-K candidates"]
+    K --> R["06 Rerank<br/>cross-encoder"]
+    R --> C["07 Context assembly<br/>untrusted_context + citations"]
+    C --> L["08 LLM via LiteLLM"]
+    L --> A["09 Grounded answer<br/>with citations"]
+    EV(["Eval set: recall@k, MRR,<br/>groundedness, citation support"])
+    EV -.-> V
+    EV -.-> R
+    EV -.-> A
+    classDef old fill:#eceff1,stroke:#607d8b,color:#263238
+    classDef rec fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    class Q,G,K,C,A old
+    class E,V,R,L,EV rec
+```
+
+**C. V3 agent flow with the human gate**
+
+```mermaid
+flowchart TD
+    S(["User request"]) --> CL["Classify / route<br/>(supervisor)"]
+    CL -->|simple question| D["Direct answer<br/>SQL or RAG"]
+    CL -->|needs analysis| EG["Gather CRM evidence<br/>(tools)"]
+    EG --> DR["Retrieve documents"]
+    DR --> AN["Analyst"]
+    AN --> RV["Reviewer"]
+    RV -->|revise, once| AN
+    RV -->|approve| TD["Task Drafter"]
+    TD --> HI{{"interrupt: human approval"}}
+    HI -->|decline| X(["Stop: nothing written"])
+    HI -->|confirm| W["Write task<br/>+ audit log row"]
+    W --> F(["Done"])
+    CP[("Postgres checkpointer")] -.saves state.- HI
+    classDef gate fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef rec fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    class HI gate
+    class CP,CL rec
+```
+
 ### What not to add
 
 - A second orchestration framework in the main path (CrewAI, AutoGen). Keep them for a throwaway comparison branch.
@@ -433,6 +519,24 @@ This keeps the roadmap's order and adds phase 0 and checks.
 | **6. New CRM modules** | Tickets, contracts and renewals, meeting notes (seeded generator, migrations, tools, adversarial cases per module, PII redaction). Auth and per-tool permissions (T9). | Known-answer questions per module pass; each new write tool sits behind the confirm gate and is covered by the audit log. |
 | **7. Agents and supervisor** | Add one agent at a time. Promote a node only if evals justify it. Measure supervisor routing accuracy. | For each added agent, a one-page ADR with before/after quality, latency and token use. |
 | **8. Product features** | Add-company UI, multi-format upload UI, adaptive retrieval (only if the reranker did not already solve it). | Playwright covers the happy path of each feature. |
+
+```mermaid
+flowchart LR
+    P0["0 Baseline<br/>CI + eval set"] --> P1["1 Model layer<br/>LiteLLM"]
+    P1 --> P2["2 Tools + MCP"]
+    P2 --> P3["3 LangGraph port"]
+    P3 --> P4["4 Retrieval upgrade"]
+    P4 --> P5["5 Observability<br/>+ evals"]
+    P5 --> P6["6 New CRM modules<br/>+ auth"]
+    P6 --> P7["7 Agents<br/>+ supervisor"]
+    P7 --> P8["8 Product features"]
+    classDef new fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef old fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    class P0 new
+    class P1,P2,P3,P4,P5,P6,P7,P8 old
+```
+
+Green = the phase this document adds. Blue = phases from the roadmap's "Revised order", with exit criteria added. Each arrow means "the exit criteria in the table above are met".
 
 Track A (product features) can move in parallel with phases 4–6 only after phase 0, and each should be its own branch, as the roadmap already says.
 
